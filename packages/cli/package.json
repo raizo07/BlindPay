@@ -1,0 +1,26 @@
+{
+  "name": "@blindpay/cli",
+  "version": "0.1.0",
+  "description": "CLI for the BlindPay API",
+  "bin": {
+    "blindpay": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@blindpay/node": "0.1.0",
+    "chalk": "^4.1.2",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "blindpay-contracts",
+  "private": true,
+  "version": "0.2.0",
+  "description": "STRK20 integration reference — see README.md. BlindPay uses the deployed Starknet privacy pool and escrow helper."
+}

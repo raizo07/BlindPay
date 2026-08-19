@@ -1,0 +1,10 @@
+{
+  "name": "blindpay",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "contracts",
+    "packages/*"
+  ]
+}

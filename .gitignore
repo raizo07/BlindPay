@@ -1,0 +1,23 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Hardhat / Solidity
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+contracts/fhevmTemp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
