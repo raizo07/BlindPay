@@ -242,7 +242,7 @@ const Home = () => {
                                 <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mt-4">What is BlindPay?</h2>
                                 <p className="text-gray-400 text-lg mt-4 max-w-3xl mx-auto leading-relaxed">
                                     BlindPay is a confidential invoice and payment protocol on Starknet using STRK20 shielded notes and escrow commitments.
-                                    Create invoices, collect payments, and settle transactions — all without revealing who paid whom, or how much.
+                                    Create invoices, collect payments and settle transactions, all without revealing who paid whom, or how much.
                                 </p>
                             </motion.div>
 
@@ -251,7 +251,7 @@ const Home = () => {
                                     {
                                         icon: Shield,
                                         title: "Shielded Invoices",
-                                        desc: "Invoice amounts and merchant commitments are bound to escrow hashes on-chain. Sensitive values stay in the STRK20 privacy pool — never visible as plaintext transfers.",
+                                        desc: "Invoice amounts and merchant commitments are bound to escrow hashes on-chain. Sensitive values stay in the STRK20 privacy pool, never visible as plaintext transfers.",
                                     },
                                     {
                                         icon: EyeOff,
@@ -398,7 +398,7 @@ const Home = () => {
                             <motion.div variants={fadeInUp} className="text-center mb-20">
                                 <span className="text-[11px] uppercase tracking-[0.25em] text-gray-500 font-semibold">How It Works</span>
                                 <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mt-4">Three Steps to Privacy</h2>
-                                <p className="text-gray-400 text-lg mt-4 max-w-2xl mx-auto">From invoice creation to shielded settlement — the entire flow stays private via the STRK20 privacy pool.</p>
+                                <p className="text-gray-400 text-lg mt-4 max-w-2xl mx-auto">From invoice creation to shielded settlement; the entire flow stays private via the STRK20 privacy pool.</p>
                             </motion.div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
@@ -420,7 +420,7 @@ const Home = () => {
                                     {
                                         step: "03",
                                         title: "Shielded Settlement",
-                                        desc: "The payer shields tokens into the STRK20 pool and deposits to escrow. The merchant claims with their secret and STARK proof — no public address link on-chain.",
+                                        desc: "The payer shields tokens into the STRK20 pool and deposits to escrow. The merchant claims with their secret and STARK proof. There is no public address link on-chain.",
                                         icon: Lock,
                                     },
                                 ].map((step, i) => (
@@ -460,7 +460,7 @@ const Home = () => {
                                         Powered by <span className="text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.35)]">STRK20</span>
                                     </h2>
                                     <p className="text-lg text-gray-300 font-light leading-relaxed">
-                                        STRK20 brings <strong className="text-white">shielded transfers</strong> to Starknet. Unlike public ERC-20 transfers that expose sender, receiver, and amount, STRK20 routes value through a privacy pool as shielded notes — validated by STARK proofs, never as plaintext on-chain.
+                                        STRK20 brings <strong className="text-white">shielded transfers</strong> to Starknet. Unlike public ERC-20 transfers that expose sender, receiver, and amount, STRK20 routes value through a privacy pool as shielded notes, validated by STARK proofs, never as plaintext on-chain.
                                     </p>
                                     <div className="space-y-4 pt-2">
                                         {[

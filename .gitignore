@@ -9,6 +9,8 @@ node_modules/
 # Build output
 dist/
 build/
+target/
+.snfoundry_cache/
 
 # Hardhat / Solidity
 contracts/artifacts/
