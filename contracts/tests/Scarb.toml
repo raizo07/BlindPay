@@ -1,0 +1,14 @@
+[package]
+name = "blindpay_escrow_tests"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+blindpay_escrow = { path = "../" }
+openzeppelin = "2.0.0"
+snforge_std = "0.49.0"
+
+[[target.starknet-contract]]
+
+[tool.snforge]
+exit_first = true

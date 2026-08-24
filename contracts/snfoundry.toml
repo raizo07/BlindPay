@@ -1,0 +1,7 @@
+[sncast.default]
+url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_8"
+account = "blindpay"
+accounts-file = "~/.starknet_accounts/starknet_open_zeppelin_accounts.json"
+
+[profile.dev.cairo]
+unstable-add-statements-functions-debug-info = true
