@@ -14,6 +14,7 @@ import { PaidInvoicesTable } from '../components/profile/PaidInvoicesTable';
 import { VerifyModal } from '../components/profile/modals/VerifyModal';
 import { PaymentHistoryModal } from '../components/profile/modals/PaymentHistoryModal';
 import { ReceiptHashesModal } from '../components/profile/modals/ReceiptHashesModal';
+import { ShieldedBalances } from '../components/profile/ShieldedBalances';
 
 const Profile: React.FC = () => {
     const { address: publicKey } = useWallet();
@@ -274,6 +275,9 @@ const Profile: React.FC = () => {
                         Manage your invoices and settlements.
                     </p>
                 </motion.div>
+
+                {/* SHIELDED BALANCES (STRK20) */}
+                <ShieldedBalances itemVariants={itemVariants} />
 
                 {/* STATS */}
                 <StatsCards
