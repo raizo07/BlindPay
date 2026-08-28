@@ -21,6 +21,7 @@ const PaymentPage = () => {
         setDonationAmount,
         isWrongChain,
         openWalletPicker,
+        switchNetwork,
         getTxExplorerUrl,
         tokenName,
     } = usePayment();
@@ -112,8 +113,26 @@ const PaymentPage = () => {
                             )}
 
                             {isWrongChain && (
-                                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-xl p-4 text-yellow-200 text-sm">
-                                    Switch your wallet to Starknet Sepolia or Mainnet to use STRK20.
+                                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-xl p-4 text-yellow-200 text-sm space-y-3">
+                                    <p>Switch your wallet to Starknet Sepolia or Mainnet to use STRK20.</p>
+                                    <div className="flex gap-2 flex-wrap">
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            className="text-xs"
+                                            onClick={() => switchNetwork('sepolia')}
+                                        >
+                                            Switch to Sepolia
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            className="text-xs"
+                                            onClick={() => switchNetwork('mainnet')}
+                                        >
+                                            Switch to Mainnet
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
 

@@ -2,19 +2,17 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWallet } from "./useWallet";
 import { useStrk20 } from "./useStrk20";
-import { generateSalt } from "../utils/starknet-utils";
-import { tokenNames, TOKEN_DECIMALS } from "../utils/starknet-config";
+import { TOKEN_DECIMALS } from "../utils/starknet-config";
 import { buildEscrowDepositActions, amountToBaseUnits } from "../utils/strk20";
 import { getExplorerTxUrl } from "../utils/starknet-config";
 import { useProviderStore } from "../stores/providerStore";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+import { fetchInvoiceByHash, updateInvoiceStatus } from "../services/api";
 
 export type PaymentStep = "CONNECT" | "VERIFY" | "PAY" | "SUCCESS" | "ALREADY_PAID";
 
 export const usePayment = () => {
     const [searchParams] = useSearchParams();
-    const { address, isConnected, isWrongChain, openWalletPicker } = useWallet();
+    const { address, isConnected, isWrongChain, openWalletPicker, switchNetwork } = useWallet();
     const { submitActions } = useStrk20();
     const providerIndex = useProviderStore((s) => s.currentProviderIndex);
 
@@ -25,7 +23,7 @@ export const usePayment = () => {
         memo: string;
         tokenType: number;
         invoiceType: number;
-        claimSecret?: string;
+        commitmentHash: string;
         items?: { description: string; quantity: number; unitPrice: number }[];
     } | null>(null);
 
@@ -39,7 +37,7 @@ export const usePayment = () => {
     useEffect(() => {
         const init = async () => {
             const merchant = searchParams.get("merchant");
-            const amount = searchParams.get("amount");
+            const amountParam = searchParams.get("amount");
             const salt = searchParams.get("salt");
             const memo = searchParams.get("memo") || "";
             const tokenParam = searchParams.get("token");
@@ -47,7 +45,6 @@ export const usePayment = () => {
             const typeParam = searchParams.get("type");
             const initialType =
                 typeParam === "donation" ? 2 : typeParam === "multipay" ? 1 : 0;
-            const secret = searchParams.get("secret") || undefined;
 
             let items: { description: string; quantity: number; unitPrice: number }[] | undefined;
             const itemsParam = searchParams.get("items");
@@ -55,7 +52,8 @@ export const usePayment = () => {
                 try {
                     items = JSON.parse(atob(itemsParam));
                 } catch {
-                    /* ignore */
+                    setError("Invalid invoice link: malformed line items.");
+                    return;
                 }
             }
 
@@ -63,61 +61,76 @@ export const usePayment = () => {
                 setError("Invalid invoice link: missing parameters.");
                 return;
             }
-            if (!amount && initialType !== 2) {
+            if (!amountParam && initialType !== 2) {
                 setError("Invalid invoice link: missing amount.");
                 return;
             }
 
+            const parsedAmount = amountParam ? Number(amountParam) : 0;
+            if (amountParam && (!Number.isFinite(parsedAmount) || parsedAmount <= 0) && initialType !== 2) {
+                setError("Invalid invoice link: bad amount.");
+                return;
+            }
+
             setError(null);
+            setLoading(true);
+            setStatus("Verifying invoice...");
 
             try {
-                setLoading(true);
-                setStatus("Verifying invoice...");
+                const data = await fetchInvoiceByHash(salt);
+                if (!data) {
+                    setError("Invoice not found. Check the link or ask the merchant to recreate it.");
+                    return;
+                }
 
-                const res = await fetch(`${API_URL}/invoice/${salt}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.status === "SETTLED" && initialType !== 1) {
-                        setInvoice({
-                            merchant,
-                            amount: Number(amount) || 0,
-                            salt,
-                            memo,
-                            tokenType,
-                            invoiceType: initialType,
-                            claimSecret: secret,
-                            items,
-                        });
-                        setStep("ALREADY_PAID");
-                        setStatus("This invoice has already been paid.");
-                        return;
-                    }
+                if (
+                    data.merchant_address?.toLowerCase() !== merchant.toLowerCase()
+                ) {
+                    setError("Invoice verification failed: merchant mismatch.");
+                    return;
+                }
+
+                if (!data.commitment_hash) {
+                    setError("Invoice is missing escrow commitment. Ask the merchant for a new link.");
+                    return;
+                }
+
+                const apiAmount = data.amount != null ? Number(data.amount) : parsedAmount;
+                if (initialType !== 2 && amountParam && Math.abs(apiAmount - parsedAmount) > 0.000001) {
+                    setError("Invoice verification failed: amount mismatch.");
+                    return;
+                }
+
+                if (data.status === "SETTLED" && initialType !== 1) {
+                    setInvoice({
+                        merchant,
+                        amount: apiAmount,
+                        salt,
+                        memo: data.memo || memo,
+                        tokenType: data.token_type ?? tokenType,
+                        invoiceType: initialType,
+                        commitmentHash: data.commitment_hash,
+                        items,
+                    });
+                    setStep("ALREADY_PAID");
+                    setStatus("This invoice has already been paid.");
+                    return;
                 }
 
                 setInvoice({
                     merchant,
-                    amount: Number(amount) || 0,
+                    amount: apiAmount,
                     salt,
-                    memo,
-                    tokenType,
+                    memo: data.memo || memo,
+                    tokenType: data.token_type ?? tokenType,
                     invoiceType: initialType,
-                    claimSecret: secret,
+                    commitmentHash: data.commitment_hash,
                     items,
                 });
                 setStep(isConnected ? "PAY" : "CONNECT");
                 setStatus(isConnected ? "Ready to pay privately." : "Connect your wallet to pay.");
             } catch {
-                setInvoice({
-                    merchant,
-                    amount: Number(amount) || 0,
-                    salt,
-                    memo,
-                    tokenType,
-                    invoiceType: initialType,
-                    claimSecret: secret,
-                    items,
-                });
-                setStep(isConnected ? "PAY" : "CONNECT");
+                setError("Could not verify invoice with the server. Try again later.");
             } finally {
                 setLoading(false);
             }
@@ -147,18 +160,10 @@ export const usePayment = () => {
         }
 
         const payAmount =
-            invoice.invoiceType === 2
-                ? donationAmount
-                : String(invoice.amount);
+            invoice.invoiceType === 2 ? donationAmount : String(invoice.amount);
 
         if (!payAmount || Number(payAmount) <= 0) {
             setError("Please enter a valid payment amount.");
-            return;
-        }
-
-        const claimSecret = invoice.claimSecret;
-        if (!claimSecret) {
-            setError("Missing claim secret in payment link. Ask the merchant for a valid invoice link.");
             return;
         }
 
@@ -171,7 +176,8 @@ export const usePayment = () => {
             const actions = buildEscrowDepositActions(
                 invoice.tokenType,
                 amountBase,
-                claimSecret
+                invoice.commitmentHash,
+                providerIndex
             );
 
             const result = await submitActions(actions);
@@ -181,17 +187,19 @@ export const usePayment = () => {
             }
 
             setTxId(result.txHash);
-            setStatus("Payment confirmed!");
+            setStatus("Payment confirmed on-chain. Updating invoice...");
 
-            await fetch(`${API_URL}/invoices/${invoice.salt}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    status: "SETTLED",
-                    payer_address: address,
-                    tx_hash: result.txHash,
-                }),
-            }).catch(() => {});
+            const updated = await updateInvoiceStatus(invoice.salt, {
+                status: "SETTLED",
+                payment_tx_ids: result.txHash,
+                payer_address: address,
+            });
+
+            if (!updated) {
+                setStatus("Paid on-chain — server indexing pending. Keep your receipt.");
+            } else {
+                setStatus("Payment confirmed!");
+            }
 
             setStep("SUCCESS");
         } catch (e) {
@@ -217,11 +225,9 @@ export const usePayment = () => {
         isWrongChain,
         handlePay,
         openWalletPicker,
+        switchNetwork,
         getTxExplorerUrl,
-        tokenName: invoice ? tokenNames[invoice.tokenType] : "USDC",
+        tokenName: invoice ? (invoice.tokenType === 0 ? "STRK" : "USDC") : "USDC",
         tokenDecimals: invoice ? TOKEN_DECIMALS[invoice.tokenType] : 6,
     };
 };
-
-// Re-export for any legacy import
-export { generateSalt };

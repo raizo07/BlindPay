@@ -14,10 +14,13 @@ import { PaidInvoicesTable } from '../components/profile/PaidInvoicesTable';
 import { VerifyModal } from '../components/profile/modals/VerifyModal';
 import { PaymentHistoryModal } from '../components/profile/modals/PaymentHistoryModal';
 import { ReceiptHashesModal } from '../components/profile/modals/ReceiptHashesModal';
+import { useClaimFunds } from '../hooks/useClaimFunds';
+import { fetchClaimSecret, updateInvoiceStatus } from '../services/api';
 import { ShieldedBalances } from '../components/profile/ShieldedBalances';
 
 const Profile: React.FC = () => {
     const { address: publicKey } = useWallet();
+    const { claimFunds, loading: claimLoading, error: claimError } = useClaimFunds();
     const { transactions, loading: loadingTransactions, fetchTransactions } = useTransactions(publicKey || undefined);
     const { notifications, clearNotification } = useRealtimeNotifications(publicKey || undefined);
     const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: 'success' | 'info' | 'error' }>>([]);
@@ -38,6 +41,7 @@ const Profile: React.FC = () => {
     const [loadingCreated, setLoadingCreated] = useState(false);
     const [loadingPayerReceipts, setLoadingPayerReceipts] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
+    const [claimingId, setClaimingId] = useState<string | null>(null);
     const itemsPerPage = 10;
 
     useEffect(() => {
@@ -130,15 +134,16 @@ const Profile: React.FC = () => {
         // For now, use DB transactions directly until contract is deployed
         return transactions.map(tx => ({
             invoiceHash: tx.invoice_hash,
-            amount: tx.amount / 1_000_000,
-            tokenType: tx.token_type || 0,
+            amount: tx.amount != null ? Number(tx.amount) : 0,
+            tokenType: tx.token_type ?? 1,
             invoiceType: tx.invoice_type || 0,
             owner: tx.merchant_address,
-            salt: tx.salt || '',
+            salt: tx.salt || tx.invoice_hash,
             status: tx.status,
             creationTx: tx.invoice_transaction_id || null,
             paymentTxIds: tx.payment_tx_ids || (tx.payment_tx_id ? [tx.payment_tx_id] : []),
             memo: tx.memo || '',
+            claimedAt: tx.claimed_at || null,
             isPending: false,
             source: 'db',
             isValidOnChain: false,
@@ -191,6 +196,50 @@ const Profile: React.FC = () => {
         }
     };
 
+    const handleClaim = async (invoice: { salt?: string; invoiceHash: string; tokenType: number }) => {
+        if (!publicKey || !invoice.salt) return;
+        setClaimingId(invoice.salt);
+        try {
+            const secretData = await fetchClaimSecret(invoice.invoiceHash, publicKey);
+            if (!secretData?.claim_secret) {
+                setToasts((prev) => [
+                    ...prev,
+                    {
+                        id: `claim-err-${Date.now()}`,
+                        message: 'Claim secret not found. Recreate the invoice or restore from backup.',
+                        type: 'error' as const,
+                    },
+                ]);
+                return;
+            }
+
+            const ok = await claimFunds(
+                secretData.claim_secret,
+                secretData.token_type ?? invoice.tokenType,
+                invoice.invoiceHash
+            );
+
+            if (ok) {
+                setToasts((prev) => [
+                    ...prev,
+                    {
+                        id: `claim-ok-${Date.now()}`,
+                        message: 'Funds claimed into your shielded STRK20 balance.',
+                        type: 'success' as const,
+                    },
+                ]);
+                fetchTransactions();
+            } else if (claimError) {
+                setToasts((prev) => [
+                    ...prev,
+                    { id: `claim-err-${Date.now()}`, message: claimError, type: 'error' as const },
+                ]);
+            }
+        } finally {
+            setClaimingId(null);
+        }
+    };
+
     const handleSettle = async (invoice: any) => {
         if (!invoice || !invoice.salt) return;
         setSettling(invoice.invoiceHash);
@@ -206,7 +255,6 @@ const Profile: React.FC = () => {
 
             // Optimistically update DB
             try {
-                const { updateInvoiceStatus } = await import('../services/api');
                 await updateInvoiceStatus(invoice.invoiceHash, { status: 'SETTLED' });
             } catch (e) {
                 console.warn("DB update failed", e);
@@ -351,6 +399,8 @@ const Profile: React.FC = () => {
                                 onSettle={handleSettle}
                                 settlingId={settling}
                                 onViewPayments={(ids) => setSelectedPaymentIds(ids)}
+                                onClaim={handleClaim}
+                                claimingId={claimLoading ? claimingId : null}
                             />
                         </div>
 

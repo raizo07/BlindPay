@@ -25,7 +25,7 @@ export const useStrk20 = () => {
                 const result = await walletAccount.strk20InvokeTransaction(actions);
                 const txHash = result.transaction_hash;
 
-                const provider = frontendProviders[providerIndex] ?? frontendProviders[2];
+                const provider = frontendProviders[providerIndex] ?? frontendProviders[1];
                 const receipt = await provider.waitForTransaction(txHash, {
                     retries: 400,
                     retryInterval: 3000,

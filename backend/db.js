@@ -31,10 +31,23 @@ async function initDB() {
                 salt TEXT,
                 invoice_type INTEGER DEFAULT 0,
                 token_type INTEGER DEFAULT 0,
+                amount NUMERIC,
+                memo TEXT,
+                commitment_hash TEXT,
+                claim_secret_encrypted TEXT,
+                payer_address TEXT,
+                claimed_at TEXT,
                 created_at TEXT,
                 updated_at TEXT
             )
         `);
+
+        await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS amount NUMERIC`);
+        await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS memo TEXT`);
+        await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS commitment_hash TEXT`);
+        await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS claim_secret_encrypted TEXT`);
+        await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payer_address TEXT`);
+        await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS claimed_at TEXT`);
 
         // Create indexes if they don't exist
         await client.query(`CREATE INDEX IF NOT EXISTS idx_status ON invoices (status)`);

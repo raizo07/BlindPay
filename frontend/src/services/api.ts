@@ -4,7 +4,7 @@ export interface Invoice {
     invoice_hash: string;
     merchant_address: string;
     payer_address?: string;
-    amount: number;
+    amount?: number | null;
     memo?: string;
     status: 'PENDING' | 'SETTLED';
     block_height?: number;
@@ -17,12 +17,25 @@ export interface Invoice {
     salt?: string;
     invoice_type?: number;
     token_type?: number;
+    commitment_hash?: string;
+    claimed_at?: string;
 }
 
-/**
- * All API functions gracefully handle backend being unavailable.
- * The backend (Supabase) is optional — core flows work on-chain only.
- */
+export interface ClaimSecretResponse {
+    invoice_hash: string;
+    claim_secret: string;
+    commitment_hash?: string;
+    token_type?: number;
+}
+
+async function parseError(response: Response): Promise<string> {
+    try {
+        const body = await response.json();
+        return body.error || `Request failed (${response.status})`;
+    } catch {
+        return `Request failed (${response.status})`;
+    }
+}
 
 export const fetchInvoices = async (status?: string): Promise<Invoice[]> => {
     try {
@@ -46,13 +59,14 @@ export const fetchInvoiceByHash = async (hash: string): Promise<Invoice | null> 
     }
 };
 
-export const createInvoice = async (data: Partial<Invoice>): Promise<Invoice | null> => {
+export const fetchClaimSecret = async (
+    invoiceHash: string,
+    merchantAddress: string
+): Promise<ClaimSecretResponse | null> => {
     try {
-        const response = await fetch(`${API_URL}/invoices`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
+        const url = new URL(`${API_URL}/invoices/${invoiceHash}/claim-secret`);
+        url.searchParams.set('merchant', merchantAddress);
+        const response = await fetch(url.toString());
         if (!response.ok) return null;
         return response.json();
     } catch {
@@ -60,12 +74,27 @@ export const createInvoice = async (data: Partial<Invoice>): Promise<Invoice | n
     }
 };
 
-export const updateInvoiceStatus = async (hash: string, data: Partial<Invoice>): Promise<Invoice | null> => {
+export const createInvoice = async (data: Record<string, unknown>): Promise<Invoice> => {
+    const response = await fetch(`${API_URL}/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+        throw new Error(await parseError(response));
+    }
+    return response.json();
+};
+
+export const updateInvoiceStatus = async (
+    hash: string,
+    data: Record<string, unknown>
+): Promise<Invoice | null> => {
     try {
         const response = await fetch(`${API_URL}/invoices/${hash}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
         });
         if (!response.ok) return null;
         return response.json();
@@ -93,3 +122,5 @@ export const fetchRecentTransactions = async (limit: number = 10): Promise<Invoi
         return [];
     }
 };
+
+export { API_URL };

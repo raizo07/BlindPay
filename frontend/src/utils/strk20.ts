@@ -1,24 +1,25 @@
 import { num } from "starknet";
 import type { WALLET_API } from "@starknet-io/types-js";
 import {
-    ESCROW_ADDRESS,
-    tokenAddresses,
+    getEscrowAddress,
+    getTokenAddresses,
     TOKEN_DECIMALS,
 } from "./starknet-config";
-import { EscrowOperation, computeCommitmentHash } from "./starknet-utils";
+import { EscrowOperation } from "./starknet-utils";
 
 /**
  * Build STRK20 actions to deposit an invoice payment into the privacy escrow.
- * Payer withdraws from pool to escrow, then invokes deposit with commitment hash.
+ * Uses the public commitment hash from the invoice record (not the claim secret).
  */
 export function buildEscrowDepositActions(
     tokenType: number,
     amount: bigint,
-    claimSecret: string
+    commitmentHash: string,
+    providerIndex = 1
 ): WALLET_API.STRK20_ACTION[] {
-    const token = num.toHex(tokenAddresses[tokenType]);
-    const escrow = num.toHex(ESCROW_ADDRESS);
-    const commitmentHash = computeCommitmentHash(claimSecret);
+    const tokens = getTokenAddresses(providerIndex);
+    const token = num.toHex(tokens[tokenType]);
+    const escrow = num.toHex(getEscrowAddress(providerIndex));
 
     return [
         {
@@ -44,15 +45,16 @@ export function buildEscrowDepositActions(
 
 /**
  * Build STRK20 actions for a merchant to claim escrowed funds into a private note.
- * Creates an open note, then invokes claim with the shared secret.
  */
 export function buildEscrowClaimActions(
     tokenType: number,
     claimSecret: string,
-    recipientAddress: string
+    recipientAddress: string,
+    providerIndex = 1
 ): WALLET_API.STRK20_ACTION[] {
-    const token = num.toHex(tokenAddresses[tokenType]);
-    const escrow = num.toHex(ESCROW_ADDRESS);
+    const tokens = getTokenAddresses(providerIndex);
+    const token = num.toHex(tokens[tokenType]);
+    const escrow = num.toHex(getEscrowAddress(providerIndex));
 
     return [
         {

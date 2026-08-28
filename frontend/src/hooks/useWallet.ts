@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
     walletV6,
     validateAndParseAddress,
@@ -8,19 +8,52 @@ import {
 import { WALLET_API } from "@starknet-io/types-js";
 import { useWalletStore } from "../stores/walletStore";
 import { useProviderStore } from "../stores/providerStore";
-import { frontendProviders, isStrk20Network } from "../utils/starknet-config";
+import {
+    frontendProviders,
+    getNetworkConfigByChain,
+    isSupportedChain,
+} from "../utils/starknet-config";
+import type { WalletWithStarknetFeatures } from "@starknet-io/get-starknet-wallet-standard/features";
 
 export const useWallet = () => {
     const address = useWalletStore((s) => s.address);
     const isConnected = useWalletStore((s) => s.isConnected);
     const chain = useWalletStore((s) => s.chain);
     const walletAccount = useWalletStore((s) => s.walletAccount);
+    const starknetWallet = useWalletStore((s) => s.starknetWallet);
+    const walletApiList = useWalletStore((s) => s.walletApiList);
     const displaySelectWalletUI = useWalletStore((s) => s.displaySelectWalletUI);
     const setSelectWalletUI = useWalletStore((s) => s.setSelectWalletUI);
     const reset = useWalletStore((s) => s.reset);
     const providerIndex = useProviderStore((s) => s.currentProviderIndex);
+    const setProviderIndex = useProviderStore((s) => s.setCurrentProviderIndex);
 
-    const isWrongChain = isConnected && !isStrk20Network(providerIndex);
+    const netConfig = chain ? getNetworkConfigByChain(chain) : null;
+    const isWrongChain =
+        isConnected &&
+        (!chain ||
+            !isSupportedChain(chain) ||
+            (netConfig != null && netConfig.providerIndex !== providerIndex));
+
+    const hasStrk20Support =
+        walletApiList?.some((spec) => spec.toUpperCase().includes("STRK20")) ?? false;
+
+    useEffect(() => {
+        if (!isConnected || !starknetWallet) return;
+
+        const syncChain = async () => {
+            try {
+                const chainId = (await walletV6.requestChainId(starknetWallet)) as string;
+                useWalletStore.getState().setChain(chainId);
+                const net = getNetworkConfigByChain(chainId);
+                setProviderIndex(net.providerIndex);
+            } catch {
+                /* wallet may not support chain query */
+            }
+        };
+
+        syncChain();
+    }, [isConnected, starknetWallet, setProviderIndex]);
 
     const openWalletPicker = useCallback(() => {
         setSelectWalletUI(true);
@@ -30,13 +63,50 @@ export const useWallet = () => {
         reset();
     }, [reset]);
 
+    const switchNetwork = useCallback(
+        async (target: "mainnet" | "sepolia" = "sepolia") => {
+            if (!starknetWallet) {
+                openWalletPicker();
+                return;
+            }
+            const chainId =
+                target === "mainnet"
+                    ? SNconstants.StarknetChainId.SN_MAIN
+                    : SNconstants.StarknetChainId.SN_SEPOLIA;
+
+            const wallet = starknetWallet as WalletWithStarknetFeatures & {
+                request?: (args: { type: string; params?: { chainId: string } }) => Promise<unknown>;
+            };
+
+            if (wallet.request) {
+                await wallet.request({
+                    type: "wallet_switchStarknetChain",
+                    params: { chainId },
+                });
+            }
+
+            useWalletStore.getState().setChain(chainId);
+            const net = getNetworkConfigByChain(chainId);
+            setProviderIndex(net.providerIndex);
+
+            const provider = frontendProviders[net.providerIndex] ?? frontendProviders[1];
+            useWalletStore.getState().setProvider(provider);
+            const walletAccount = await WalletAccountV6.connect(provider, starknetWallet);
+            useWalletStore.getState().setWalletAccount(walletAccount);
+        },
+        [starknetWallet, openWalletPicker, setProviderIndex]
+    );
+
     const signMessage = useCallback(
         async (message: string): Promise<string> => {
             if (!walletAccount) {
                 throw new Error("Wallet not connected");
             }
+            if (!chain) {
+                throw new Error("Wallet chain not resolved");
+            }
             const result = await walletAccount.signMessage({
-                domain: { name: "BlindPay", version: "1", chainId: chain || SNconstants.StarknetChainId.SN_SEPOLIA },
+                domain: { name: "BlindPay", version: "1", chainId: chain },
                 message: { content: message },
                 primaryType: "BlindPayMessage",
                 types: {
@@ -58,12 +128,15 @@ export const useWallet = () => {
         isConnected,
         chain,
         walletAccount,
+        starknetWallet,
         isWrongChain,
+        hasStrk20Support,
         providerIndex,
         displaySelectWalletUI,
         setSelectWalletUI,
         openWalletPicker,
         disconnect,
+        switchNetwork,
         signMessage,
     };
 };
@@ -72,7 +145,7 @@ export async function connectStarknetWallet(
     selectedWallet: Parameters<typeof WalletAccountV6.connect>[1]
 ): Promise<void> {
     const providerIndex = useProviderStore.getState().currentProviderIndex;
-    const provider = frontendProviders[providerIndex] ?? frontendProviders[2];
+    const provider = frontendProviders[providerIndex] ?? frontendProviders[1];
 
     useWalletStore.getState().setStarknetWallet(selectedWallet);
 
@@ -96,14 +169,21 @@ export async function connectStarknetWallet(
 
     if (connected) {
         const chainId = (await walletV6.requestChainId(selectedWallet)) as string;
+        if (!isSupportedChain(chainId)) {
+            throw new Error("Switch your wallet to Starknet Sepolia or Mainnet.");
+        }
         useWalletStore.getState().setChain(chainId);
-        useProviderStore
-            .getState()
-            .setCurrentProviderIndex(
-                chainId === SNconstants.StarknetChainId.SN_MAIN ? 0 : 2
-            );
+        const net = getNetworkConfigByChain(chainId);
+        useProviderStore.getState().setCurrentProviderIndex(net.providerIndex);
     }
 
     const apis = await walletV6.supportedSpecs(selectedWallet);
     useWalletStore.getState().setWalletApiList(apis);
+
+    const hasStrk20 = apis.some((spec) => spec.toUpperCase().includes("STRK20"));
+    if (!hasStrk20) {
+        throw new Error(
+            "This wallet does not support STRK20. Install Ready (https://www.argent.xyz/ready)."
+        );
+    }
 }

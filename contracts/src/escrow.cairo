@@ -48,6 +48,7 @@ pub mod errors {
     pub const COMMITMENT_NOT_FOUND: felt252 = 'COMMITMENT_NOT_FOUND';
     pub const ALREADY_CLAIMED: felt252 = 'ALREADY_CLAIMED';
     pub const CALLER_NOT_PRIVACY: felt252 = 'CALLER_NOT_PRIVACY';
+    pub const ZERO_PRIVACY: felt252 = 'ZERO_PRIVACY';
 }
 
 /// Computes `poseidon(ESCROW_COMMITMENT_TAG, secret)` for invoice claim secrets.
@@ -76,8 +77,30 @@ pub mod BlindPayEscrow {
         commitments: starknet::storage::Map<felt252, CommitmentEntry>,
     }
 
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        DepositRecorded: DepositRecorded,
+        Claimed: Claimed,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct DepositRecorded {
+        commitment_hash: felt252,
+        token: ContractAddress,
+        amount: u128,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct Claimed {
+        commitment_hash: felt252,
+        token: ContractAddress,
+        amount: u128,
+    }
+
     #[constructor]
     fn constructor(ref self: ContractState, privacy_contract: ContractAddress) {
+        assert(privacy_contract.is_non_zero(), errors::ZERO_PRIVACY);
         self.privacy_contract.write(privacy_contract);
     }
 
@@ -115,6 +138,8 @@ pub mod BlindPayEscrow {
                             CommitmentEntry { token, amount, claimed: false },
                         );
 
+                    self.emit(Event::DepositRecorded(DepositRecorded { commitment_hash, token, amount }));
+
                     ArrayTrait::new()
                 },
                 EscrowOperation::Claim => {
@@ -123,12 +148,14 @@ pub mod BlindPayEscrow {
                     assert(entry.token.is_non_zero(), errors::COMMITMENT_NOT_FOUND);
                     assert(!entry.claimed, errors::ALREADY_CLAIMED);
 
+                    IERC20Dispatcher { contract_address: entry.token }
+                        .approve(spender: privacy_addr, amount: entry.amount.into());
+
                     self
                         .commitments
                         .write(hash, CommitmentEntry { claimed: true, ..entry });
 
-                    IERC20Dispatcher { contract_address: entry.token }
-                        .approve(spender: privacy_addr, amount: entry.amount.into());
+                    self.emit(Event::Claimed(Claimed { commitment_hash: hash, token: entry.token, amount: entry.amount }));
 
                     let mut out = ArrayTrait::new();
                     out

@@ -6,6 +6,6 @@ interface ProviderState {
 }
 
 export const useProviderStore = create<ProviderState>((set) => ({
-    currentProviderIndex: 2,
+    currentProviderIndex: 1,
     setCurrentProviderIndex: (currentProviderIndex) => set({ currentProviderIndex }),
 }));

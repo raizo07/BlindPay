@@ -147,7 +147,10 @@ export const InvoiceTable: React.FC<InvoiceTableProps> = ({
                                             )}
 
                                             {/* Claim Button — merchant claims held funds */}
-                                            {onClaim && inv.paymentTxIds?.length > 0 && inv.claimSecret && (
+                                            {onClaim &&
+                                                inv.paymentTxIds?.length > 0 &&
+                                                !inv.claimedAt &&
+                                                (inv.status === 'SETTLED' || String(inv.status) === '1') && (
                                                 <button
                                                     onClick={() => onClaim(inv)}
                                                     disabled={claimingId === inv.salt}

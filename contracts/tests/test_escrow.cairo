@@ -162,6 +162,40 @@ fn test_claim_marks_claimed_and_returns_note_deposit() {
 }
 
 #[test]
+#[should_panic(expected: ('ALREADY_CLAIMED',))]
+fn test_claim_rejects_double_claim() {
+    let privacy = addr(0x111);
+    let escrow = deploy_escrow(privacy);
+    let token = deploy_mock_token();
+    let secret: felt252 = 888;
+    let commitment = compute_commitment_hash(secret);
+    let amount: u128 = 100;
+
+    token_dispatcher_mint(token, escrow, amount);
+
+    start_cheat_caller_address(escrow, privacy);
+    let dispatcher = IBlindPayEscrowDispatcher { contract_address: escrow };
+    dispatcher.privacy_invoke(EscrowOperation::Deposit, commitment, token, amount, 0, 0);
+    dispatcher.privacy_invoke(EscrowOperation::Claim, 0, zero_addr(), 0, secret, 0x1);
+    dispatcher.privacy_invoke(EscrowOperation::Claim, 0, zero_addr(), 0, secret, 0x2);
+    stop_cheat_caller_address(escrow);
+}
+
+fn token_dispatcher_mint(token: ContractAddress, recipient: ContractAddress, amount: u128) {
+    let token_dispatcher = IMockERC20Dispatcher { contract_address: token };
+    token_dispatcher.mint(recipient, amount.into());
+}
+
+#[test]
+fn test_constructor_rejects_zero_privacy() {
+    let contract = declare("BlindPayEscrow").unwrap().contract_class();
+    let mut calldata = ArrayTrait::new();
+    calldata.append(zero_addr().into());
+    let result = contract.deploy(@calldata);
+    assert(result.is_err(), 'zero privacy fails');
+}
+
+#[test]
 #[should_panic(expected: ('COMMITMENT_NOT_FOUND',))]
 fn test_claim_rejects_wrong_secret() {
     let privacy = addr(0x111);

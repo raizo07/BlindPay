@@ -46,11 +46,7 @@ const decrypt = (text) => {
     try {
         const parts = text.split(':');
         if (parts.length !== 3) {
-            // Assume it might be legacy unencrypted data or fail
-            // For now, if it doesn't match format, return original (useful for migration/debugging)
-            // But strict security would say throw error.
-            // Let's assume strict format for now.
-            return text;
+            throw new Error('Invalid encrypted payload format');
         }
 
         const iv = Buffer.from(parts[0], 'hex');
@@ -66,7 +62,7 @@ const decrypt = (text) => {
         return decrypted;
     } catch (error) {
         console.error('Decryption error:', error);
-        return text; // Fallback to raw text if decryption fails (e.g. invalid key or data)
+        throw new Error('Decryption failed');
     }
 };
 

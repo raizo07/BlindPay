@@ -5,8 +5,8 @@ import {
     generateClaimSecret,
     computeCommitmentHash,
 } from "../utils/starknet-utils";
-import { tokenNames } from "../utils/starknet-config";
 import { InvoiceData } from "../types/invoice";
+import { createInvoice } from "../services/api";
 
 export type InvoiceType = "standard" | "multipay" | "donation";
 
@@ -16,16 +16,15 @@ export interface LineItem {
     unitPrice: number;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-
 export const useCreateInvoice = () => {
-    const { address, isConnected, openWalletPicker } = useWallet();
+    const { address, isConnected, isWrongChain, openWalletPicker } = useWallet();
 
     const [amount, setAmount] = useState<number | "">("");
     const [loading, setLoading] = useState(false);
     const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
     const [memo, setMemo] = useState<string>("");
     const [status, setStatus] = useState<string>("");
+    const [error, setError] = useState<string | null>(null);
     const [invoiceType, setInvoiceType] = useState<InvoiceType>("standard");
     const [tokenType, setTokenType] = useState<number>(1);
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -52,16 +51,22 @@ export const useCreateInvoice = () => {
     const handleCreate = async () => {
         if (!address || !isConnected) {
             openWalletPicker();
-            setStatus("Please connect your Starknet privacy wallet first.");
+            setError("Please connect your Starknet privacy wallet first.");
+            return;
+        }
+
+        if (isWrongChain) {
+            setError("Switch your wallet to Starknet Sepolia or Mainnet.");
             return;
         }
 
         if (invoiceType !== "donation" && (!amount || amount <= 0)) {
-            setStatus("Please enter a valid amount.");
+            setError("Please enter a valid amount.");
             return;
         }
 
         setLoading(true);
+        setError(null);
         setStatus("Creating invoice...");
 
         try {
@@ -75,28 +80,36 @@ export const useCreateInvoice = () => {
             if (invoiceType === "donation") invoiceTypeNum = 2;
 
             setStatus("Saving invoice...");
-            const res = await fetch(`${API_URL}/invoices`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    invoice_hash: salt,
-                    merchant_address: address,
-                    amount: isDonation ? null : Number(amount),
-                    token: tokenNames[tokenType]?.toLowerCase() ?? "usdc",
-                    token_type: tokenType,
-                    invoice_type: invoiceTypeNum,
-                    memo,
-                    commitment_hash: commitmentHash,
-                    status: "PENDING",
-                }),
+            const saved = await createInvoice({
+                invoice_hash: salt,
+                merchant_address: address,
+                amount: isDonation ? undefined : Number(amount),
+                token_type: tokenType,
+                invoice_type: invoiceTypeNum,
+                memo,
+                commitment_hash: commitmentHash,
+                claim_secret: claimSecret,
+                status: "PENDING",
+                salt,
             });
 
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.error || "Failed to save invoice");
+            if (!saved) {
+                throw new Error("Failed to save invoice");
             }
 
-            const paymentUrl = `${window.location.origin}/pay?merchant=${address}&amount=${amount || ""}&salt=${salt}&token=${tokenType}&memo=${encodeURIComponent(memo)}&type=${invoiceType}&secret=${claimSecret}`;
+            const params = new URLSearchParams({
+                merchant: address,
+                salt,
+                token: String(tokenType),
+            });
+            if (!isDonation && amount) params.set("amount", String(amount));
+            if (memo) params.set("memo", memo);
+            if (invoiceType !== "standard") params.set("type", invoiceType);
+            if (lineItems.length > 0) {
+                params.set("items", btoa(JSON.stringify(lineItems)));
+            }
+
+            const paymentUrl = `${window.location.origin}/pay?${params.toString()}`;
 
             const data: InvoiceData = {
                 salt,
@@ -111,10 +124,13 @@ export const useCreateInvoice = () => {
             };
 
             setInvoiceData(data);
-            setStatus("Invoice created! Share the payment link with your customer.");
+            setStatus(
+                "Invoice created! Share the payment link with your customer. Save your claim secret — you need it to claim funds."
+            );
         } catch (e) {
             console.error(e);
-            setStatus(e instanceof Error ? e.message : "Failed to create invoice.");
+            setError(e instanceof Error ? e.message : "Failed to create invoice.");
+            setStatus("");
         } finally {
             setLoading(false);
         }
@@ -123,6 +139,7 @@ export const useCreateInvoice = () => {
     const resetInvoice = () => {
         setInvoiceData(null);
         setStatus("");
+        setError(null);
         setAmount("");
         setMemo("");
     };
@@ -135,6 +152,7 @@ export const useCreateInvoice = () => {
         memo,
         setMemo,
         status,
+        error,
         invoiceType,
         setInvoiceType,
         tokenType,
