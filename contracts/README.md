@@ -13,8 +13,8 @@ BlindPay ships a **Cairo escrow anonymizer** that integrates with the Starknet S
 
 ## Prerequisites
 
-- [Scarb](https://docs.swmansion.com/scarb/) 2.12+
-- [Starknet Foundry](https://foundry-rs.github.io/starknet-foundry/) (`snforge`) 0.49+
+- [Scarb](https://docs.swmansion.com/scarb/) **2.12.1** (must match CI — newer Scarb builds use syscalls incompatible with snforge 0.50)
+- [Starknet Foundry](https://foundry-rs.github.io/starknet-foundry/) (`snforge`) **0.50.0** (must match `snforge_std` in `Scarb.toml`)
 
 ## Build & test
 
