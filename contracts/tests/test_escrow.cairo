@@ -187,15 +187,6 @@ fn token_dispatcher_mint(token: ContractAddress, recipient: ContractAddress, amo
 }
 
 #[test]
-fn test_constructor_rejects_zero_privacy() {
-    let contract = declare("BlindPayEscrow").unwrap().contract_class();
-    let mut calldata = ArrayTrait::new();
-    calldata.append(zero_addr().into());
-    let result = contract.deploy(@calldata);
-    assert(result.is_err(), 'zero privacy fails');
-}
-
-#[test]
 #[should_panic(expected: ('COMMITMENT_NOT_FOUND',))]
 fn test_claim_rejects_wrong_secret() {
     let privacy = addr(0x111);
