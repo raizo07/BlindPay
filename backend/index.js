@@ -26,9 +26,25 @@ validateEnv();
 
 const app = express();
 
+const allowedOrigins = frontendUrl.split(',').map((s) => s.trim());
+
 app.use(
     cors({
-        origin: frontendUrl.split(',').map((s) => s.trim()),
+        origin(origin, callback) {
+            if (!origin) {
+                return callback(null, true);
+            }
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+            if (/^https:\/\/[\w-]+\.vercel\.app$/i.test(origin)) {
+                return callback(null, true);
+            }
+            if (/^https:\/\/[\w-]+\.onrender\.com$/i.test(origin)) {
+                return callback(null, true);
+            }
+            callback(new Error(`CORS blocked for origin: ${origin}`));
+        },
         credentials: true,
     })
 );

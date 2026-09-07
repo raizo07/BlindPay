@@ -1,0 +1,27 @@
+# BlindPay backend — deploy at https://dashboard.render.com/select-repo?type=blueprint
+services:
+  - type: web
+    name: blindpay-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: blindpay-db
+          property: connectionString
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+
+databases:
+  - name: blindpay-db
+    plan: free
+    databaseName: blindpay
+    user: blindpay

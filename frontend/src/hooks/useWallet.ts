@@ -18,12 +18,7 @@ import {
     detectStrk20Support,
     STRK20_UNAVAILABLE_MESSAGE,
 } from "../utils/wallet-strk20";
-import {
-    clearWalletSession,
-    findWalletByName,
-    readWalletSession,
-    saveWalletSession,
-} from "../utils/wallet-session";
+import { findWalletByName, readWalletSession, saveWalletSession, clearWalletSession } from "../utils/wallet-session";
 
 export const useWallet = () => {
     const address = useWalletStore((s) => s.address);
@@ -243,8 +238,13 @@ export async function restoreWalletSession(): Promise<boolean> {
         return false;
     }
 
+    const restore = connectStarknetWallet(wallet, { silent: true });
+    const timeout = new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error("Wallet restore timed out")), 7000);
+    });
+
     try {
-        await connectStarknetWallet(wallet, { silent: true });
+        await Promise.race([restore, timeout]);
         return true;
     } catch {
         clearWalletSession();
