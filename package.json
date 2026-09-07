@@ -12,6 +12,7 @@
     "contracts:test": "cd contracts && snforge test",
     "frontend:build": "npm run build --workspace=frontend",
     "build": "npm run contracts:build && npm run frontend:build",
-    "test": "npm run contracts:test && npm test --workspace=frontend"
+    "test": "npm run contracts:test && npm test --workspace=frontend",
+    "verify:strk20": "node scripts/verify-strk20-txs.mjs"
   }
 }

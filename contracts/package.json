@@ -6,6 +6,7 @@
   "scripts": {
     "build": "scarb build",
     "test": "snforge test",
-    "fmt": "scarb fmt"
+    "fmt": "scarb fmt",
+    "deploy:mainnet": "bash scripts/deploy-mainnet.sh"
   }
 }

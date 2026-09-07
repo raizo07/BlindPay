@@ -1,6 +1,11 @@
 [sncast.default]
-url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_8"
+url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_9"
 account = "blindpay"
+accounts-file = "~/.starknet_accounts/starknet_open_zeppelin_accounts.json"
+
+[sncast.mainnet]
+url = "https://rpc.starknet.lava.build/rpc/v0_9"
+account = "oz_deployer"
 accounts-file = "~/.starknet_accounts/starknet_open_zeppelin_accounts.json"
 
 [profile.dev.cairo]

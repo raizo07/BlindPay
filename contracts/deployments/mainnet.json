@@ -1,0 +1,9 @@
+{
+  "network": "mainnet",
+  "pool_address": "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a",
+  "escrow_address": "0x04ff27f7943b0a5ea6f9e129d97b3870b594a427b14680676e68edb4b75c0348",
+  "class_hash": "0x537120f1b2e07b2d7f872262c647d8edd5833ed8ea94914bdb39d791ed3fd35",
+  "declare_tx": "0x1222c2663856e9cad8cb5f3b12bb9835a18053aeb4c46138b698bf15e5a93e6",
+  "deploy_tx": "0x00ba323b278573d8c8e1b2a6b1116c0834fa90296ca3b094a4be8bc99a965d04",
+  "deployed_at": "2026-08-31T10:12:00Z"
+}

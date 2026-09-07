@@ -113,7 +113,7 @@ VITE_STRK20_ESCROW_ADDRESS=0x01ad75c06ad9086bec4c24c967397c3fdbb32f8c11525bca82e
 VITE_STRK20_POOL_ADDRESS=0xd894af9ed2bdede33675049ae5285df000c44258a2250b84a9c3bed0d7c233
 ```
 
-**Mainnet:** use mainnet pool + escrow addresses from [STRK20 docs](https://strk20.starknet.io/docs) or your deployment, then in the app switch network to **Mainnet** (provider index 0). Ensure Ready is on Starknet Mainnet with STRK20 enabled.
+**Mainnet:** see **[docs/MAINNET.md](docs/MAINNET.md)** — deploy escrow, run three pool txs, fill [`strk20.json`](strk20.json) for hackathon eligibility. Canonical pool: `0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a`. Switch the app to **Mainnet** (provider index 0) and use Ready on Starknet Mainnet with STRK20 enabled.
 
 ### Run locally
 

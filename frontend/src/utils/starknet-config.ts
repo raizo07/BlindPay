@@ -23,11 +23,18 @@ const SEPOLIA_DEFAULTS = {
     strk: "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
 };
 
+const MAINNET_POOL =
+    "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a";
+const MAINNET_STRK =
+    "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d";
+const MAINNET_USDC =
+    "0x033068f6539f8e6e6b131e6b2b814e6c34a5224bc66947c47dab9dfee93b35fb";
+
 const MAINNET_DEFAULTS = {
     escrow: import.meta.env.VITE_STRK20_ESCROW_ADDRESS_MAINNET || "",
-    pool: import.meta.env.VITE_STRK20_POOL_ADDRESS_MAINNET || "",
-    usdc: import.meta.env.VITE_USDC_ADDRESS_MAINNET || "",
-    strk: import.meta.env.VITE_STRK_ADDRESS_MAINNET || "",
+    pool: import.meta.env.VITE_STRK20_POOL_ADDRESS_MAINNET || MAINNET_POOL,
+    usdc: import.meta.env.VITE_USDC_ADDRESS_MAINNET || MAINNET_USDC,
+    strk: import.meta.env.VITE_STRK_ADDRESS_MAINNET || MAINNET_STRK,
 };
 
 export const NETWORKS: Record<NetworkId, NetworkConfig> = {
@@ -48,9 +55,9 @@ export const NETWORKS: Record<NetworkId, NetworkConfig> = {
         chainId: SNconstants.StarknetChainId.SN_MAIN,
         providerIndex: 0,
         escrow: MAINNET_DEFAULTS.escrow || import.meta.env.VITE_STRK20_ESCROW_ADDRESS || "",
-        pool: MAINNET_DEFAULTS.pool || import.meta.env.VITE_STRK20_POOL_ADDRESS || "",
-        usdc: MAINNET_DEFAULTS.usdc || import.meta.env.VITE_USDC_ADDRESS || "",
-        strk: MAINNET_DEFAULTS.strk || import.meta.env.VITE_STRK_ADDRESS || "",
+        pool: MAINNET_DEFAULTS.pool,
+        usdc: MAINNET_DEFAULTS.usdc,
+        strk: MAINNET_DEFAULTS.strk,
         explorerTxBase: "https://voyager.online/tx",
     },
 };
