@@ -1,6 +1,8 @@
 import React, { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WalletPickerModal } from "../components/wallet/SelectWallet";
+import { restoreWalletSession } from "./useWallet";
+import { useWalletStore } from "../stores/walletStore";
 
 const queryClient = new QueryClient();
 
@@ -9,6 +11,18 @@ interface WalletProviderProps {
 }
 
 export const BlindPayWalletProvider = ({ children }: WalletProviderProps) => {
+    useEffect(() => {
+        let cancelled = false;
+        const { setRestoring } = useWalletStore.getState();
+        setRestoring(true);
+        restoreWalletSession().finally(() => {
+            if (!cancelled) setRestoring(false);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     useEffect(() => {
         const handler = (event: PromiseRejectionEvent) => {
             const err = event.reason;

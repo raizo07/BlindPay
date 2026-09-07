@@ -10,9 +10,11 @@ const MobileCreateInvoice: React.FC = () => {
         memo, setMemo,
         status, loading,
         invoiceData,
+        error,
         handleCreate,
         resetInvoice,
         publicKey,
+        isRestoring,
         invoiceType,
         setInvoiceType,
         tokenType,
@@ -52,6 +54,8 @@ const MobileCreateInvoice: React.FC = () => {
                                 loading={loading}
                                 publicKey={publicKey}
                                 status={status}
+                                error={error}
+                                isRestoring={isRestoring}
                                 invoiceType={invoiceType}
                                 setInvoiceType={setInvoiceType}
                                 tokenType={tokenType}

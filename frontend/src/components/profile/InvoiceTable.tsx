@@ -75,6 +75,7 @@ export const InvoiceTable: React.FC<InvoiceTableProps> = ({
                             if (inv.tokenType === 3) paymentParams.append('token', 'usdt');
                             if (inv.invoiceType === 1) paymentParams.append('type', 'multipay');
                             if (inv.invoiceType === 2) paymentParams.append('type', 'donation');
+                            if (inv.commitment_hash) paymentParams.append('commitment', inv.commitment_hash);
 
                             // 1. Link WITH Memo (Default)
                             if (inv.memo) paymentParams.append('memo', inv.memo);

@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { createStore, type Store } from "@starknet-io/get-starknet-discovery";
 import type { WalletWithStarknetFeatures } from "@starknet-io/get-starknet-wallet-standard/features";
+import {
+    STRK20_UNAVAILABLE_MESSAGE,
+} from "../../utils/wallet-strk20";
 import { connectStarknetWallet } from "../../hooks/useWallet";
 import { useWalletStore } from "../../stores/walletStore";
 
@@ -26,7 +29,11 @@ export const WalletPickerModal: React.FC = () => {
 
     const pickable = wallets.filter((w) => {
         const id = normalizeId(w.name);
-        return !id.includes("metamask") && !id.includes("braavos");
+        return (
+            !id.includes("metamask") &&
+            !id.includes("braavos") &&
+            !id.includes("xverse")
+        );
     });
 
     const selectWallet = async (wallet: WalletWithStarknetFeatures) => {
@@ -36,7 +43,11 @@ export const WalletPickerModal: React.FC = () => {
             await connectStarknetWallet(wallet);
             setSelectWalletUI(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Wallet connection failed.");
+            const raw = err instanceof Error ? err.message : "Wallet connection failed.";
+            const message = /not implemented/i.test(raw)
+                ? STRK20_UNAVAILABLE_MESSAGE
+                : raw;
+            setError(message);
         } finally {
             setConnecting(false);
         }
@@ -66,10 +77,14 @@ export const WalletPickerModal: React.FC = () => {
                 </div>
 
                 <p className="text-gray-400 text-sm mb-4">
-                    STRK20 requires a privacy-enabled wallet such as{" "}
+                    STRK20 requires Ready X (or Ready) with privacy enabled on Starknet Mainnet.{" "}
                     <a href="https://www.argent.xyz/ready" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
-                        Ready
-                    </a>.
+                        Get Ready
+                    </a>
+                    {" · "}
+                    <a href="https://strk20.starknet.io/app" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
+                        Register viewing key
+                    </a>
                 </p>
 
                 {pickable.length ? (

@@ -90,6 +90,13 @@ export const InvoiceCard: React.FC<InvoiceCardProps> = ({
                     >
                         {copied ? 'Copied!' : 'Copy'}
                     </Button>
+                    <Button
+                        variant="primary"
+                        size="md"
+                        onClick={() => window.open(paymentLink, '_blank', 'noopener,noreferrer')}
+                    >
+                        Open
+                    </Button>
                 </div>
             </div>
 

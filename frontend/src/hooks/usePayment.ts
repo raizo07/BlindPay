@@ -39,6 +39,7 @@ export const usePayment = () => {
             const merchant = searchParams.get("merchant");
             const amountParam = searchParams.get("amount");
             const salt = searchParams.get("salt");
+            const commitmentParam = searchParams.get("commitment");
             const memo = searchParams.get("memo") || "";
             const tokenParam = searchParams.get("token");
             const tokenType = tokenParam === "0" ? 0 : 1;
@@ -90,10 +91,12 @@ export const usePayment = () => {
                     return;
                 }
 
-                if (!data.commitment_hash) {
+                if (!data.commitment_hash && !commitmentParam) {
                     setError("Invoice is missing escrow commitment. Ask the merchant for a new link.");
                     return;
                 }
+
+                const commitmentHash = data.commitment_hash || commitmentParam!;
 
                 const apiAmount = data.amount != null ? Number(data.amount) : parsedAmount;
                 if (initialType !== 2 && amountParam && Math.abs(apiAmount - parsedAmount) > 0.000001) {
@@ -109,7 +112,7 @@ export const usePayment = () => {
                         memo: data.memo || memo,
                         tokenType: data.token_type ?? tokenType,
                         invoiceType: initialType,
-                        commitmentHash: data.commitment_hash,
+                        commitmentHash: commitmentHash,
                         items,
                     });
                     setStep("ALREADY_PAID");
@@ -124,7 +127,7 @@ export const usePayment = () => {
                     memo: data.memo || memo,
                     tokenType: data.token_type ?? tokenType,
                     invoiceType: initialType,
-                    commitmentHash: data.commitment_hash,
+                    commitmentHash: commitmentHash,
                     items,
                 });
                 setStep(isConnected ? "PAY" : "CONNECT");
@@ -193,6 +196,7 @@ export const usePayment = () => {
                 status: "SETTLED",
                 payment_tx_ids: result.txHash,
                 payer_address: address,
+                block_settled: result.blockNumber,
             });
 
             if (!updated) {

@@ -11,6 +11,7 @@ import { Scanner } from '@yudiel/react-qr-scanner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProviderStore } from '../../stores/providerStore';
 import { getExplorerTxUrl } from '../../utils/starknet-config';
+import { STRK20_REGISTER_URL } from '../../utils/wallet-strk20';
 
 const MobilePaymentPage = () => {
     const [searchParams] = useSearchParams();
@@ -66,6 +67,16 @@ const MobilePaymentPage = () => {
             {error && (
                 <GlassCard className="p-4 border-red-500/30 bg-red-900/20">
                     <p className="text-red-200 text-sm">{error}</p>
+                    {/not registered|viewing key|strk20\.starknet\.io/i.test(error) && (
+                        <a
+                            href={STRK20_REGISTER_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block mt-3 text-cyan-400 hover:underline text-sm font-medium"
+                        >
+                            Register viewing key →
+                        </a>
+                    )}
                 </GlassCard>
             )}
 
