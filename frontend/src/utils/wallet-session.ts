@@ -8,7 +8,7 @@ export interface WalletSession {
     walletName: string;
 }
 
-export function saveWalletSession(wallet: WalletWithStarknetFeatures): void {
+export function saveWalletSession(wallet: Pick<WalletWithStarknetFeatures, "name">): void {
     try {
         localStorage.setItem(WALLET_SESSION_KEY, JSON.stringify({ walletName: wallet.name }));
     } catch {

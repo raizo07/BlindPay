@@ -21,12 +21,12 @@ describe("wallet-session", () => {
     });
 
     it("persists and reads wallet name", () => {
-        saveWalletSession({ name: "Ready X" } as { name: string });
+        saveWalletSession({ name: "Ready X" });
         expect(readWalletSession()).toEqual({ walletName: "Ready X" });
     });
 
     it("clears saved session", () => {
-        saveWalletSession({ name: "Ready X" } as { name: string });
+        saveWalletSession({ name: "Ready X" });
         clearWalletSession();
         expect(readWalletSession()).toBeNull();
     });
