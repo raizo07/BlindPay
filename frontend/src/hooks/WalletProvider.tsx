@@ -10,16 +10,26 @@ interface WalletProviderProps {
     children: React.ReactNode;
 }
 
+const RESTORE_TIMEOUT_MS = 8000;
+
 export const BlindPayWalletProvider = ({ children }: WalletProviderProps) => {
     useEffect(() => {
         let cancelled = false;
         const { setRestoring } = useWalletStore.getState();
         setRestoring(true);
+
+        const timeout = window.setTimeout(() => {
+            if (!cancelled) setRestoring(false);
+        }, RESTORE_TIMEOUT_MS);
+
         restoreWalletSession().finally(() => {
+            window.clearTimeout(timeout);
             if (!cancelled) setRestoring(false);
         });
+
         return () => {
             cancelled = true;
+            window.clearTimeout(timeout);
         };
     }, []);
 

@@ -4,6 +4,9 @@ import './index.css'
 import App from './App.tsx'
 import { BlindPayWalletProvider } from './hooks/WalletProvider.tsx'
 import { validateEnv } from './config/env.ts'
+import { initWalletDiscovery } from './utils/wallet-discovery.ts'
+
+initWalletDiscovery()
 
 const envCheck = validateEnv()
 if (!envCheck.ok) {

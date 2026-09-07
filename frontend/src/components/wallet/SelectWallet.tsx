@@ -1,40 +1,45 @@
-import React, { useEffect, useState } from "react";
-import { createStore, type Store } from "@starknet-io/get-starknet-discovery";
+import { useEffect, useState } from "react";
 import type { WalletWithStarknetFeatures } from "@starknet-io/get-starknet-wallet-standard/features";
-import {
-    STRK20_UNAVAILABLE_MESSAGE,
-} from "../../utils/wallet-strk20";
+import { STRK20_UNAVAILABLE_MESSAGE } from "../../utils/wallet-strk20";
 import { connectStarknetWallet } from "../../hooks/useWallet";
 import { useWalletStore } from "../../stores/walletStore";
-
-function normalizeId(s: string): string {
-    return s.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
+import {
+    getPickableWallets,
+    getWalletDiscoveryStore,
+    refreshDiscoveredWallets,
+} from "../../utils/wallet-discovery";
 
 /** Global wallet picker modal — mount once; open via useWalletStore.setSelectWalletUI(true). */
-export const WalletPickerModal: React.FC = () => {
+export function WalletPickerModal() {
     const displaySelectWalletUI = useWalletStore((s) => s.displaySelectWalletUI);
     const setSelectWalletUI = useWalletStore((s) => s.setSelectWalletUI);
 
     const [connecting, setConnecting] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [wallets, setWallets] = useState<WalletWithStarknetFeatures[]>([]);
 
+    const syncWallets = () => setWallets(getPickableWallets());
+
     useEffect(() => {
-        const store: Store = createStore({ eip1193Adapters: [] });
-        setWallets(store.getWallets().slice());
-        const unsub = store.subscribe((next) => setWallets(next.slice()));
-        return () => unsub();
+        const store = getWalletDiscoveryStore();
+        syncWallets();
+        return store.subscribe(() => syncWallets());
     }, []);
 
-    const pickable = wallets.filter((w) => {
-        const id = normalizeId(w.name);
-        return (
-            !id.includes("metamask") &&
-            !id.includes("braavos") &&
-            !id.includes("xverse")
-        );
-    });
+    useEffect(() => {
+        if (!displaySelectWalletUI) return;
+        refreshDiscoveredWallets();
+        syncWallets();
+    }, [displaySelectWalletUI]);
+
+    const handleRefresh = () => {
+        setRefreshing(true);
+        setError("");
+        refreshDiscoveredWallets();
+        syncWallets();
+        window.setTimeout(() => setRefreshing(false), 400);
+    };
 
     const selectWallet = async (wallet: WalletWithStarknetFeatures) => {
         setError("");
@@ -57,7 +62,7 @@ export const WalletPickerModal: React.FC = () => {
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
             onClick={() => !connecting && setSelectWalletUI(false)}
         >
             <div
@@ -67,6 +72,7 @@ export const WalletPickerModal: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-white font-semibold text-lg">Connect a Starknet wallet</h3>
                     <button
+                        type="button"
                         onClick={() => setSelectWalletUI(false)}
                         disabled={connecting}
                         className="text-gray-400 hover:text-white text-xl leading-none"
@@ -77,21 +83,45 @@ export const WalletPickerModal: React.FC = () => {
                 </div>
 
                 <p className="text-gray-400 text-sm mb-4">
-                    STRK20 requires Ready X (or Ready) with privacy enabled on Starknet Mainnet.{" "}
-                    <a href="https://www.argent.xyz/ready" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
-                        Get Ready
-                    </a>
-                    {" · "}
-                    <a href="https://strk20.starknet.io/app" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
-                        Register viewing key
-                    </a>
+                    STRK20 requires the <strong className="text-white">Ready</strong> browser extension
+                    (desktop Chrome or Brave). Enable privacy on Starknet Mainnet and register your viewing key.
                 </p>
 
-                {pickable.length ? (
+                <div className="flex flex-wrap gap-2 mb-4 text-xs">
+                    <a
+                        href="https://www.argent.xyz/ready"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyan-400 hover:underline"
+                    >
+                        Install Ready extension
+                    </a>
+                    <span className="text-gray-600">·</span>
+                    <a
+                        href="https://strk20.starknet.io/app"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyan-400 hover:underline"
+                    >
+                        Register viewing key
+                    </a>
+                    <span className="text-gray-600">·</span>
+                    <button
+                        type="button"
+                        onClick={handleRefresh}
+                        disabled={connecting || refreshing}
+                        className="text-cyan-400 hover:underline disabled:opacity-50"
+                    >
+                        {refreshing ? "Scanning…" : "Refresh wallets"}
+                    </button>
+                </div>
+
+                {wallets.length ? (
                     <div className="flex flex-col gap-2">
-                        {pickable.map((w) => (
+                        {wallets.map((w) => (
                             <button
                                 key={w.name}
+                                type="button"
                                 onClick={() => selectWallet(w)}
                                 disabled={connecting}
                                 className="flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl py-3 px-4 text-white text-sm transition-all disabled:opacity-50"
@@ -107,13 +137,14 @@ export const WalletPickerModal: React.FC = () => {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-gray-400 text-sm">
-                        No Starknet wallet detected. Install{" "}
-                        <a href="https://www.argent.xyz/ready" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
-                            Ready
-                        </a>{" "}
-                        to use private payments.
-                    </p>
+                    <div className="text-gray-400 text-sm space-y-2">
+                        <p>No Starknet wallet detected in this browser.</p>
+                        <ul className="list-disc list-inside text-gray-500 space-y-1">
+                            <li>Use desktop Chrome or Brave with the Ready extension installed</li>
+                            <li>Mobile Safari/Chrome cannot use browser extensions — open this site on desktop</li>
+                            <li>After installing Ready, click &quot;Refresh wallets&quot; above</li>
+                        </ul>
+                    </div>
                 )}
 
                 {error && (
@@ -124,6 +155,6 @@ export const WalletPickerModal: React.FC = () => {
             </div>
         </div>
     );
-};
+}
 
 export default WalletPickerModal;

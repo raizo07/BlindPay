@@ -10,7 +10,10 @@ const pool = new Pool({
     ssl:
         connectionString?.includes('sslmode=require') ||
         connectionString?.includes('neon.tech') ||
-        connectionString?.includes('supabase.co')
+        connectionString?.includes('supabase.co') ||
+        connectionString?.includes('render.com') ||
+        connectionString?.includes('railway.app') ||
+        connectionString?.includes('rlwy.net')
             ? { rejectUnauthorized: false }
             : false,
 });
