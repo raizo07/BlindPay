@@ -1,11 +1,7 @@
 import { useCallback } from "react";
 import type { WALLET_API } from "@starknet-io/types-js";
 import { useWallet } from "./useWallet";
-import {
-    frontendProviders,
-    getNetworkConfig,
-    getNetworkConfigByChain,
-} from "../utils/starknet-config";
+import { getStarknetRpcProvider, resolveProviderIndex } from "../utils/starknet-config";
 import { useProviderStore } from "../stores/providerStore";
 import { useWalletStore } from "../stores/walletStore";
 import { confirmStarknetTransaction, shortHex } from "../utils/starknet-utils";
@@ -18,31 +14,68 @@ export interface Strk20TxResult {
     error?: string;
 }
 
+export interface SubmitStrk20Options {
+    /** When true, blocks until the RPC returns a receipt (slower). Default: false. */
+    waitForReceipt?: boolean;
+}
+
 export const useStrk20 = () => {
-    const { walletAccount } = useWallet();
+    const { walletAccount, chain } = useWallet();
     const providerIndex = useProviderStore((s) => s.currentProviderIndex);
 
-    const submitActions = useCallback(
-        async (actions: WALLET_API.STRK20_ACTION[]): Promise<Strk20TxResult> => {
+    const getProvider = useCallback(() => {
+        const activeChain = chain || useWalletStore.getState().chain;
+        return getStarknetRpcProvider(activeChain, providerIndex);
+    }, [chain, providerIndex]);
+
+    const preflightActions = useCallback(
+        async (actions: WALLET_API.STRK20_ACTION[]): Promise<string | null> => {
             if (!walletAccount) {
-                return { txHash: "", status: "error", error: "Connect a privacy-enabled Starknet wallet (Ready)." };
+                return "Connect a privacy-enabled Starknet wallet (Ready).";
+            }
+            try {
+                await walletAccount.strk20PrepareInvoke(actions, true);
+                return null;
+            } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                if (
+                    /NOT_REGISTERED|INSUFFICIENT_PRIVATE|PRIVACY_LEAK|not registered|viewing key/i.test(
+                        message
+                    )
+                ) {
+                    return formatStrk20Error(message);
+                }
+                return null;
+            }
+        },
+        [walletAccount]
+    );
+
+    const submitActions = useCallback(
+        async (
+            actions: WALLET_API.STRK20_ACTION[],
+            options?: SubmitStrk20Options
+        ): Promise<Strk20TxResult> => {
+            if (!walletAccount) {
+                return {
+                    txHash: "",
+                    status: "error",
+                    error: "Connect a privacy-enabled Starknet wallet (Ready).",
+                };
             }
 
             try {
                 const result = await walletAccount.strk20InvokeTransaction(actions);
                 const txHash = result.transaction_hash;
 
-                const chain = useWalletStore.getState().chain;
-                const net = chain
-                    ? getNetworkConfigByChain(chain)
-                    : getNetworkConfig(providerIndex);
-                const provider =
-                    frontendProviders[net.providerIndex] ?? frontendProviders[0];
+                if (!options?.waitForReceipt) {
+                    return { txHash, status: "success" };
+                }
 
+                const provider = getProvider();
                 const receipt = await confirmStarknetTransaction(provider, txHash);
 
-                const exec = receipt.execution_status;
-                if (exec === "REVERTED") {
+                if (receipt.execution_status === "REVERTED") {
                     return { txHash, status: "error", error: "Transaction reverted on-chain." };
                 }
 
@@ -56,7 +89,15 @@ export const useStrk20 = () => {
                 return { txHash: "", status: "error", error: formatStrk20Error(message) };
             }
         },
-        [walletAccount, providerIndex]
+        [walletAccount, getProvider]
+    );
+
+    const confirmSubmittedTx = useCallback(
+        async (txHash: string) => {
+            const provider = getProvider();
+            return confirmStarknetTransaction(provider, txHash);
+        },
+        [getProvider]
     );
 
     const getShieldedBalances = useCallback(async () => {
@@ -69,5 +110,14 @@ export const useStrk20 = () => {
         }
     }, [walletAccount]);
 
-    return { submitActions, getShieldedBalances, shortTx: shortHex };
+    const activeProviderIndex = resolveProviderIndex(chain, providerIndex);
+
+    return {
+        submitActions,
+        preflightActions,
+        confirmSubmittedTx,
+        getShieldedBalances,
+        shortTx: shortHex,
+        activeProviderIndex,
+    };
 };

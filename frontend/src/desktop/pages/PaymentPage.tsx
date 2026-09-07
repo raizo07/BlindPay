@@ -183,6 +183,8 @@ const PaymentPage = () => {
                                         <Shimmer className="w-4 h-4 rounded-full" />
                                         <span>{status}</span>
                                     </>
+                                ) : error ? (
+                                    <span className="text-gray-500">Fix the issue above, then try again.</span>
                                 ) : (
                                     status
                                 )}

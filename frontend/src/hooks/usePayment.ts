@@ -13,8 +13,9 @@ export type PaymentStep = "CONNECT" | "VERIFY" | "PAY" | "SUCCESS" | "ALREADY_PA
 export const usePayment = () => {
     const [searchParams] = useSearchParams();
     const { address, isConnected, isWrongChain, openWalletPicker, switchNetwork } = useWallet();
-    const { submitActions } = useStrk20();
+    const { submitActions, preflightActions, confirmSubmittedTx, activeProviderIndex } = useStrk20();
     const providerIndex = useProviderStore((s) => s.currentProviderIndex);
+    const netProviderIndex = activeProviderIndex ?? providerIndex;
 
     const [invoice, setInvoice] = useState<{
         merchant: string;
@@ -172,7 +173,7 @@ export const usePayment = () => {
 
         setLoading(true);
         setError(null);
-        setStatus("Submitting private payment to STRK20 escrow...");
+        setStatus("Checking STRK20 readiness...");
 
         try {
             const amountBase = amountToBaseUnits(payAmount, invoice.tokenType);
@@ -180,7 +181,16 @@ export const usePayment = () => {
                 invoice.tokenType,
                 amountBase,
                 invoice.commitmentHash,
-                providerIndex
+                netProviderIndex
+            );
+
+            const preflightError = await preflightActions(actions);
+            if (preflightError) {
+                throw new Error(preflightError);
+            }
+
+            setStatus(
+                "Approve the payment in Ready — ZK proof generation may take up to a minute."
             );
 
             const result = await submitActions(actions);
@@ -190,31 +200,46 @@ export const usePayment = () => {
             }
 
             setTxId(result.txHash);
-            setStatus("Payment confirmed on-chain. Updating invoice...");
+            setStep("SUCCESS");
+            setLoading(false);
+            setStatus("Payment submitted! Saving receipt...");
 
             const updated = await updateInvoiceStatus(invoice.salt, {
                 status: "SETTLED",
                 payment_tx_ids: result.txHash,
                 payer_address: address,
-                block_settled: result.blockNumber,
             });
 
-            if (!updated) {
-                setStatus("Paid on-chain — server indexing pending. Keep your receipt.");
-            } else {
-                setStatus("Payment confirmed!");
-            }
+            setStatus(
+                updated
+                    ? "Payment confirmed!"
+                    : "Paid on-chain — server indexing pending. Keep your receipt."
+            );
 
-            setStep("SUCCESS");
+            void confirmSubmittedTx(result.txHash)
+                .then((receipt) => {
+                    if (
+                        receipt.execution_status === "REVERTED" ||
+                        receipt.block_number == null
+                    ) {
+                        return;
+                    }
+                    void updateInvoiceStatus(invoice.salt, {
+                        block_settled: receipt.block_number,
+                    });
+                })
+                .catch(() => {
+                    /* receipt indexing is best-effort */
+                });
         } catch (e) {
             console.error(e);
             setError(e instanceof Error ? e.message : "Payment failed.");
-        } finally {
+            setStatus("Ready to pay privately.");
             setLoading(false);
         }
     };
 
-    const getTxExplorerUrl = (hash: string) => getExplorerTxUrl(hash, providerIndex);
+    const getTxExplorerUrl = (hash: string) => getExplorerTxUrl(hash, netProviderIndex);
 
     return {
         invoice,
