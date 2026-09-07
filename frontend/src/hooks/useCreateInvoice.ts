@@ -17,7 +17,7 @@ export interface LineItem {
 }
 
 export const useCreateInvoice = () => {
-    const { address, isConnected, isWrongChain, openWalletPicker } = useWallet();
+    const { address, isConnected, isWrongChain, isRestoring, openWalletPicker } = useWallet();
 
     const [amount, setAmount] = useState<number | "">("");
     const [loading, setLoading] = useState(false);
@@ -104,6 +104,7 @@ export const useCreateInvoice = () => {
             });
             if (!isDonation && amount) params.set("amount", String(amount));
             if (memo) params.set("memo", memo);
+            params.set("commitment", commitmentHash);
             if (invoiceType !== "standard") params.set("type", invoiceType);
             if (lineItems.length > 0) {
                 params.set("items", btoa(JSON.stringify(lineItems)));
@@ -164,6 +165,7 @@ export const useCreateInvoice = () => {
         handleCreate,
         resetInvoice,
         isConnected,
+        isRestoring,
         publicKey: address,
         openWalletPicker,
     };

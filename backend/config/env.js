@@ -28,6 +28,6 @@ function validateEnv() {
 module.exports = {
     validateEnv,
     port: Number(process.env.PORT) || 3000,
-    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173,http://127.0.0.1:5173',
     isProduction: process.env.NODE_ENV === 'production',
 };

@@ -14,6 +14,8 @@ interface InvoiceFormProps {
     loading: boolean;
     publicKey: string | null;
     status: string;
+    error?: string | null;
+    isRestoring?: boolean;
     invoiceType: InvoiceType;
     setInvoiceType: (val: InvoiceType) => void;
     tokenType: number;
@@ -29,6 +31,8 @@ export const MobileInvoiceForm: React.FC<InvoiceFormProps> = ({
     loading,
     publicKey,
     status,
+    error,
+    isRestoring = false,
     invoiceType,
     setInvoiceType,
     tokenType,
@@ -136,14 +140,16 @@ export const MobileInvoiceForm: React.FC<InvoiceFormProps> = ({
                             variant="primary"
                             className="w-full"
                             onClick={handleCreate}
-                            disabled={loading}
-                            glow={!loading}
+                            disabled={loading || isRestoring || !publicKey}
+                            glow={!loading && !isRestoring && !!publicKey}
                         >
                             {loading ? (
                                 <span className="flex items-center gap-2">
                                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                     Creating...
                                 </span>
+                            ) : isRestoring ? (
+                                'Restoring wallet...'
                             ) : (
                                 invoiceType === 'standard' ? 'Generate Blind Invoice Link' :
                                     invoiceType === 'multipay' ? 'Create Multi Pay Link' :
@@ -153,12 +159,12 @@ export const MobileInvoiceForm: React.FC<InvoiceFormProps> = ({
                     )}
                 </div>
 
-                {status && (
-                    <div className={`p-4 rounded-xl text-center text-sm font-medium border ${status.includes('Error')
+                {(error || status) && (
+                    <div className={`p-4 rounded-xl text-center text-sm font-medium border ${error || status.includes('Error')
                         ? 'bg-red-500/10 border-red-500/20 text-red-400'
                         : 'bg-neon-primary/10 border-neon-primary/20 text-neon-primary'
                         }`}>
-                        {status}
+                        {error || status}
                     </div>
                 )}
             </div>

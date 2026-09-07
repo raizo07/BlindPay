@@ -1,13 +1,20 @@
 import { useCallback } from "react";
 import type { WALLET_API } from "@starknet-io/types-js";
 import { useWallet } from "./useWallet";
-import { frontendProviders } from "../utils/starknet-config";
+import {
+    frontendProviders,
+    getNetworkConfig,
+    getNetworkConfigByChain,
+} from "../utils/starknet-config";
 import { useProviderStore } from "../stores/providerStore";
-import { shortHex } from "../utils/starknet-utils";
+import { useWalletStore } from "../stores/walletStore";
+import { confirmStarknetTransaction, shortHex } from "../utils/starknet-utils";
+import { formatStrk20Error } from "../utils/wallet-strk20";
 
 export interface Strk20TxResult {
     txHash: string;
     status: "pending" | "success" | "error";
+    blockNumber?: number;
     error?: string;
 }
 
@@ -25,21 +32,28 @@ export const useStrk20 = () => {
                 const result = await walletAccount.strk20InvokeTransaction(actions);
                 const txHash = result.transaction_hash;
 
-                const provider = frontendProviders[providerIndex] ?? frontendProviders[1];
-                const receipt = await provider.waitForTransaction(txHash, {
-                    retries: 400,
-                    retryInterval: 3000,
-                });
+                const chain = useWalletStore.getState().chain;
+                const net = chain
+                    ? getNetworkConfigByChain(chain)
+                    : getNetworkConfig(providerIndex);
+                const provider =
+                    frontendProviders[net.providerIndex] ?? frontendProviders[0];
 
-                const exec = (receipt as { execution_status?: string })?.execution_status;
+                const receipt = await confirmStarknetTransaction(provider, txHash);
+
+                const exec = receipt.execution_status;
                 if (exec === "REVERTED") {
                     return { txHash, status: "error", error: "Transaction reverted on-chain." };
                 }
 
-                return { txHash, status: "success" };
+                return {
+                    txHash,
+                    status: "success",
+                    blockNumber: receipt.block_number,
+                };
             } catch (err) {
                 const message = err instanceof Error ? err.message : String(err);
-                return { txHash: "", status: "error", error: message };
+                return { txHash: "", status: "error", error: formatStrk20Error(message) };
             }
         },
         [walletAccount, providerIndex]

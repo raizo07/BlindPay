@@ -14,6 +14,16 @@ import {
     isSupportedChain,
 } from "../utils/starknet-config";
 import type { WalletWithStarknetFeatures } from "@starknet-io/get-starknet-wallet-standard/features";
+import {
+    detectStrk20Support,
+    STRK20_UNAVAILABLE_MESSAGE,
+} from "../utils/wallet-strk20";
+import {
+    clearWalletSession,
+    findWalletByName,
+    readWalletSession,
+    saveWalletSession,
+} from "../utils/wallet-session";
 
 export const useWallet = () => {
     const address = useWalletStore((s) => s.address);
@@ -24,6 +34,7 @@ export const useWallet = () => {
     const walletApiList = useWalletStore((s) => s.walletApiList);
     const displaySelectWalletUI = useWalletStore((s) => s.displaySelectWalletUI);
     const setSelectWalletUI = useWalletStore((s) => s.setSelectWalletUI);
+    const isRestoring = useWalletStore((s) => s.isRestoring);
     const reset = useWalletStore((s) => s.reset);
     const providerIndex = useProviderStore((s) => s.currentProviderIndex);
     const setProviderIndex = useProviderStore((s) => s.setCurrentProviderIndex);
@@ -36,7 +47,10 @@ export const useWallet = () => {
             (netConfig != null && netConfig.providerIndex !== providerIndex));
 
     const hasStrk20Support =
-        walletApiList?.some((spec) => spec.toUpperCase().includes("STRK20")) ?? false;
+        walletApiList?.some((entry) => {
+            const s = entry.toUpperCase();
+            return s.includes("STRK20") || s.includes("WALLET_STRK20");
+        }) ?? false;
 
     useEffect(() => {
         if (!isConnected || !starknetWallet) return;
@@ -60,6 +74,7 @@ export const useWallet = () => {
     }, [setSelectWalletUI]);
 
     const disconnect = useCallback(() => {
+        clearWalletSession();
         reset();
     }, [reset]);
 
@@ -134,6 +149,7 @@ export const useWallet = () => {
         providerIndex,
         displaySelectWalletUI,
         setSelectWalletUI,
+        isRestoring,
         openWalletPicker,
         disconnect,
         switchNetwork,
@@ -149,11 +165,29 @@ export async function connectStarknetWallet(
 
     useWalletStore.getState().setStarknetWallet(selectedWallet);
 
-    const walletAccount = await WalletAccountV6.connect(provider, selectedWallet);
+    let walletAccount: WalletAccountV6;
+    try {
+        walletAccount = await WalletAccountV6.connect(provider, selectedWallet);
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/not implemented/i.test(msg)) {
+            throw new Error(STRK20_UNAVAILABLE_MESSAGE);
+        }
+        throw err;
+    }
     useWalletStore.getState().setWalletAccount(walletAccount);
     useWalletStore.getState().setProvider(provider);
 
-    const accounts = await walletV6.requestAccounts(selectedWallet);
+    let accounts: string[] | string;
+    try {
+        accounts = await walletV6.requestAccounts(selectedWallet);
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/not implemented/i.test(msg)) {
+            throw new Error(STRK20_UNAVAILABLE_MESSAGE);
+        }
+        throw err;
+    }
     if (typeof accounts === "string") {
         throw new Error("This wallet is not compatible with STRK20.");
     }
@@ -178,12 +212,38 @@ export async function connectStarknetWallet(
     }
 
     const apis = await walletV6.supportedSpecs(selectedWallet);
-    useWalletStore.getState().setWalletApiList(apis);
+    let walletApis: string[] = [];
+    try {
+        walletApis = (await walletV6.supportedWalletApi(selectedWallet)).map(String);
+    } catch {
+        /* optional on older wallets */
+    }
+    useWalletStore.getState().setWalletApiList([...apis, ...walletApis]);
 
-    const hasStrk20 = apis.some((spec) => spec.toUpperCase().includes("STRK20"));
+    const hasStrk20 = await detectStrk20Support(selectedWallet, apis, walletApis);
     if (!hasStrk20) {
-        throw new Error(
-            "This wallet does not support STRK20. Install Ready (https://www.argent.xyz/ready)."
-        );
+        throw new Error(STRK20_UNAVAILABLE_MESSAGE);
+    }
+
+    saveWalletSession(selectedWallet as WalletWithStarknetFeatures);
+}
+
+/** Reconnect the last wallet after a full page reload (no-op if none saved). */
+export async function restoreWalletSession(): Promise<boolean> {
+    const session = readWalletSession();
+    if (!session) return false;
+
+    const wallet = findWalletByName(session.walletName);
+    if (!wallet) {
+        clearWalletSession();
+        return false;
+    }
+
+    try {
+        await connectStarknetWallet(wallet);
+        return true;
+    } catch {
+        clearWalletSession();
+        return false;
     }
 }

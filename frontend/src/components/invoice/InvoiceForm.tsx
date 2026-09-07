@@ -15,6 +15,7 @@ interface InvoiceFormProps {
     loading: boolean;
     publicKey: string | null;
     status: string;
+    error?: string | null;
     invoiceType: InvoiceType;
     setInvoiceType: (val: InvoiceType) => void;
     tokenType: number;
@@ -23,6 +24,7 @@ interface InvoiceFormProps {
     addLineItem: () => void;
     updateLineItem: (index: number, field: keyof LineItem, value: string | number) => void;
     removeLineItem: (index: number) => void;
+    isRestoring?: boolean;
 }
 
 export const InvoiceForm: React.FC<InvoiceFormProps> = ({
@@ -34,6 +36,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
     loading,
     publicKey,
     status,
+    error,
     invoiceType,
     setInvoiceType,
     tokenType,
@@ -42,6 +45,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
     addLineItem,
     updateLineItem,
     removeLineItem,
+    isRestoring = false,
 }) => {
     const hasLineItems = lineItems.length > 0;
 
@@ -217,14 +221,16 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                     variant="primary"
                     className="w-full mt-4"
                     onClick={handleCreate}
-                    disabled={loading || !publicKey}
-                    glow={!loading && !!publicKey}
+                    disabled={loading || isRestoring || !publicKey}
+                    glow={!loading && !isRestoring && !!publicKey}
                 >
                     {loading ? (
                         <span className="flex items-center gap-2">
                             <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             Creating...
                         </span>
+                    ) : isRestoring ? (
+                        'Reconnecting wallet…'
                     ) : !publicKey ? (
                         'Connect Wallet to Continue'
                     ) : (
@@ -234,12 +240,12 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                     )}
                 </Button>
 
-                {status && (
-                    <div className={`p-4 rounded-xl text-center text-sm font-medium border ${status.includes('Error')
+                {(error || status) && (
+                    <div className={`p-4 rounded-xl text-center text-sm font-medium border ${error || status.includes('Error')
                         ? 'bg-red-500/10 border-red-500/20 text-red-400'
                         : 'bg-neon-primary/10 border-neon-primary/20 text-neon-primary'
                         }`}>
-                        {status}
+                        {error || status}
                     </div>
                 )}
             </div>

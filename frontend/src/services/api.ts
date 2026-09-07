@@ -75,11 +75,18 @@ export const fetchClaimSecret = async (
 };
 
 export const createInvoice = async (data: Record<string, unknown>): Promise<Invoice> => {
-    const response = await fetch(`${API_URL}/invoices`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-    });
+    let response: Response;
+    try {
+        response = await fetch(`${API_URL}/invoices`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+    } catch {
+        throw new Error(
+            'Could not reach the BlindPay server. Start the backend (cd backend && docker compose up -d).'
+        );
+    }
     if (!response.ok) {
         throw new Error(await parseError(response));
     }

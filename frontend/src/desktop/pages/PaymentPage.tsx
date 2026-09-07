@@ -7,6 +7,7 @@ import { GlassCard } from '../../components/ui/GlassCard';
 import { Button } from '../../components/ui/Button';
 import { Shimmer } from '../../components/ui/Shimmer';
 import { Input } from '../../components/ui/Input';
+import { STRK20_REGISTER_URL } from '../../utils/wallet-strk20';
 
 const PaymentPage = () => {
     const {
@@ -76,6 +77,16 @@ const PaymentPage = () => {
                 {error && (
                     <GlassCard className="p-6 mb-6 border-red-500/30 bg-red-900/20">
                         <p className="text-red-200 text-sm">{error}</p>
+                        {/not registered|viewing key|strk20\.starknet\.io/i.test(error) && (
+                            <a
+                                href={STRK20_REGISTER_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block mt-3 text-cyan-400 hover:underline text-sm font-medium"
+                            >
+                                Register viewing key →
+                            </a>
+                        )}
                     </GlassCard>
                 )}
 

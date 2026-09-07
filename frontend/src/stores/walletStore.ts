@@ -21,6 +21,8 @@ export interface WalletState {
     setSelectWalletUI: (open: boolean) => void;
     walletApiList: string[];
     setWalletApiList: (apis: string[]) => void;
+    isRestoring: boolean;
+    setRestoring: (restoring: boolean) => void;
     reset: () => void;
 }
 
@@ -43,6 +45,8 @@ export const useWalletStore = create<WalletState>((set) => ({
     setSelectWalletUI: (displaySelectWalletUI) => set({ displaySelectWalletUI }),
     walletApiList: [],
     setWalletApiList: (walletApiList) => set({ walletApiList }),
+    isRestoring: false,
+    setRestoring: (isRestoring) => set({ isRestoring }),
     reset: () =>
         set({
             starknetWallet: undefined,
@@ -54,5 +58,6 @@ export const useWalletStore = create<WalletState>((set) => ({
             isConnected: false,
             displaySelectWalletUI: false,
             walletApiList: [],
+            isRestoring: false,
         }),
 }));

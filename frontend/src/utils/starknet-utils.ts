@@ -1,4 +1,30 @@
 import { hash, shortString, num } from "starknet";
+import type { ProviderInterface } from "starknet";
+
+/** ~60s max wait, then one direct receipt fetch. */
+const TX_RECEIPT_RETRIES = 30;
+const TX_RECEIPT_INTERVAL_MS = 2000;
+
+export interface TxReceiptSummary {
+    execution_status?: string;
+    block_number?: number;
+}
+
+export async function confirmStarknetTransaction(
+    provider: ProviderInterface,
+    txHash: string
+): Promise<TxReceiptSummary> {
+    try {
+        const receipt = await provider.waitForTransaction(txHash, {
+            retries: TX_RECEIPT_RETRIES,
+            retryInterval: TX_RECEIPT_INTERVAL_MS,
+        });
+        return receipt as TxReceiptSummary;
+    } catch {
+        const receipt = await provider.getTransactionReceipt(txHash);
+        return receipt as TxReceiptSummary;
+    }
+}
 
 export const ESCROW_COMMITMENT_TAG = shortString.encodeShortString("ESCROW_COMMITMENT_TAG:V1");
 
