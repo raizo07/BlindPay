@@ -158,8 +158,10 @@ export const useWallet = () => {
 };
 
 export async function connectStarknetWallet(
-    selectedWallet: Parameters<typeof WalletAccountV6.connect>[1]
+    selectedWallet: Parameters<typeof WalletAccountV6.connect>[1],
+    options?: { silent?: boolean }
 ): Promise<void> {
+    const silent = options?.silent ?? false;
     const providerIndex = useProviderStore.getState().currentProviderIndex;
     const provider = frontendProviders[providerIndex] ?? frontendProviders[1];
 
@@ -167,7 +169,9 @@ export async function connectStarknetWallet(
 
     let walletAccount: WalletAccountV6;
     try {
-        walletAccount = await WalletAccountV6.connect(provider, selectedWallet);
+        walletAccount = silent
+            ? await WalletAccountV6.connectSilent(provider, selectedWallet)
+            : await WalletAccountV6.connect(provider, selectedWallet);
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         if (/not implemented/i.test(msg)) {
@@ -180,7 +184,7 @@ export async function connectStarknetWallet(
 
     let accounts: string[] | string;
     try {
-        accounts = await walletV6.requestAccounts(selectedWallet);
+        accounts = await walletV6.requestAccounts(selectedWallet, silent);
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         if (/not implemented/i.test(msg)) {
@@ -240,7 +244,7 @@ export async function restoreWalletSession(): Promise<boolean> {
     }
 
     try {
-        await connectStarknetWallet(wallet);
+        await connectStarknetWallet(wallet, { silent: true });
         return true;
     } catch {
         clearWalletSession();

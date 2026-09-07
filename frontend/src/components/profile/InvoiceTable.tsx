@@ -3,7 +3,8 @@ import { Download } from 'lucide-react';
 import StatusBadge from '../StatusBadge';
 import { LinkButton } from '../ui/LinkButton';
 import { CopyButton } from '../ui/CopyButton';
-import { tokenNames } from '../../utils/starknet-config';
+import { tokenNames, getExplorerTxUrl } from '../../utils/starknet-config';
+import { useProviderStore } from '../../stores/providerStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -36,6 +37,7 @@ export const InvoiceTable: React.FC<InvoiceTableProps> = ({
     onClaim,
     claimingId
 }) => {
+    const providerIndex = useProviderStore((s) => s.currentProviderIndex);
     const filteredInvoices = invoices.filter(inv => !search || inv.invoiceHash?.toLowerCase().includes(search.toLowerCase()));
 
     // Pagination Logic
@@ -120,7 +122,7 @@ export const InvoiceTable: React.FC<InvoiceTableProps> = ({
                                     <td className="py-4 px-6 text-center">
                                         <div className="flex flex-col gap-1 items-center">
                                             {inv.creationTx && (
-                                                <a href={`https://sepolia.etherscan.io/tx/${inv.creationTx}`} target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-neon-primary transition-colors underline decoration-dotted">
+                                                <a href={getExplorerTxUrl(inv.creationTx, providerIndex)} target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-neon-primary transition-colors underline decoration-dotted">
                                                     Create Tx
                                                 </a>
                                             )}

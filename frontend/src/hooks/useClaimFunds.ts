@@ -7,8 +7,9 @@ import { updateInvoiceStatus } from "../services/api";
 
 export const useClaimFunds = () => {
     const { address, isConnected, isWrongChain, openWalletPicker } = useWallet();
-    const { submitActions } = useStrk20();
+    const { submitActions, activeProviderIndex } = useStrk20();
     const providerIndex = useProviderStore((s) => s.currentProviderIndex);
+    const netProviderIndex = activeProviderIndex ?? providerIndex;
 
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<string>("");
@@ -35,13 +36,15 @@ export const useClaimFunds = () => {
         try {
             setLoading(true);
             setError(null);
-            setStatus("Claiming funds from STRK20 escrow into your private balance...");
+            setStatus(
+                "Approve the claim in Ready — ZK proof generation may take up to a minute."
+            );
 
             const actions = buildEscrowClaimActions(
                 tokenType,
                 claimSecret,
                 address,
-                providerIndex
+                netProviderIndex
             );
             const result = await submitActions(actions);
 

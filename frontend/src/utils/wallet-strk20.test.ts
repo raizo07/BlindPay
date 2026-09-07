@@ -29,6 +29,14 @@ describe("walletApisIndicateStrk20", () => {
     });
 });
 
+describe("detectStrk20Support", () => {
+    it("trusts Ready without probing balances", async () => {
+        const { detectStrk20Support } = await import("./wallet-strk20");
+        const ready = { name: "Ready X" } as import("@starknet-io/get-starknet-wallet-standard/features").WalletWithStarknetFeatures;
+        await expect(detectStrk20Support(ready, [], [])).resolves.toBe(true);
+    });
+});
+
 describe("formatStrk20Error", () => {
     it("maps NOT_REGISTERED to registration instructions", () => {
         const msg = formatStrk20Error("An error occurred (NOT_REGISTERED)");

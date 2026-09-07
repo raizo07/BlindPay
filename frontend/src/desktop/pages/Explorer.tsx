@@ -8,6 +8,8 @@ import { Shimmer } from '../../components/ui/Shimmer';
 import { useTransactions } from '../../hooks/useTransactions';
 import { pageVariants, staggerContainer, fadeInUp, scaleIn } from '../../utils/animations';
 import { PaymentHistoryModal } from '../../components/profile/modals/PaymentHistoryModal';
+import { useProviderStore } from '../../stores/providerStore';
+import { getExplorerTxUrl } from '../../utils/starknet-config';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const getInvoiceStatus = async (salt: string): Promise<number | null> => {
@@ -54,6 +56,7 @@ const Explorer: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
     const { transactions, loading, fetchTransactions } = useTransactions();
+    const providerIndex = useProviderStore((s) => s.currentProviderIndex);
 
     useEffect(() => {
         fetchTransactions(50);
@@ -109,7 +112,7 @@ const Explorer: React.FC = () => {
 
     const openExplorer = (txId?: string) => {
         if (txId) {
-            window.open(`https://sepolia.etherscan.io/tx/${txId}`, '_blank');
+            window.open(getExplorerTxUrl(txId, providerIndex), '_blank', 'noopener,noreferrer');
         }
     };
     const InvoiceGraph = ({ data, dates }: { data: number[], dates: string[] }) => {
@@ -272,7 +275,7 @@ const Explorer: React.FC = () => {
                                                     <div className="flex flex-col gap-2 my-3">
                                                         {inv.invoice_transaction_id && (
                                                             <a
-                                                                href={`https://sepolia.etherscan.io/tx/${inv.invoice_transaction_id}`}
+                                                                href={getExplorerTxUrl(inv.invoice_transaction_id, providerIndex)}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="flex items-center gap-2 group/btn w-fit"
@@ -289,7 +292,7 @@ const Explorer: React.FC = () => {
                                                         )}
                                                         {inv.payment_tx_id && (
                                                             <a
-                                                                href={`https://sepolia.etherscan.io/tx/${inv.payment_tx_id}`}
+                                                                href={getExplorerTxUrl(inv.payment_tx_id, providerIndex)}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="flex items-center gap-2 group/btn w-fit"
@@ -316,12 +319,12 @@ const Explorer: React.FC = () => {
 
                                                 {inv.invoice_transaction_id && (
                                                     <a
-                                                        href={`https://sepolia.etherscan.io/tx/${inv.invoice_transaction_id}`}
+                                                        href={getExplorerTxUrl(inv.invoice_transaction_id, providerIndex)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         onClick={(e) => e.stopPropagation()}
                                                         className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                                                        title="View on Explorer"
+                                                        title="View on Voyager"
                                                     >
                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

@@ -6,6 +6,7 @@ import { useWallet } from '../hooks/useWallet';
 import { useTransactions } from '../hooks/useTransactions';
 import { useRealtimeNotifications } from '../hooks/useRealtimeNotifications';
 import { getExplorerTxUrl } from '../utils/starknet-config';
+import { useProviderStore } from '../stores/providerStore';
 import type { InvoiceRecord, MerchantReceipt, PayerReceipt } from '../utils/starknet-utils';
 
 import { StatsCards } from '../components/profile/StatsCards';
@@ -20,6 +21,7 @@ import { ShieldedBalances } from '../components/profile/ShieldedBalances';
 
 const Profile: React.FC = () => {
     const { address: publicKey } = useWallet();
+    const providerIndex = useProviderStore((s) => s.currentProviderIndex);
     const { claimFunds, loading: claimLoading, error: claimError } = useClaimFunds();
     const { transactions, loading: loadingTransactions, fetchTransactions } = useTransactions(publicKey || undefined);
     const { notifications, clearNotification } = useRealtimeNotifications(publicKey || undefined);
@@ -192,7 +194,7 @@ const Profile: React.FC = () => {
 
     const openExplorer = (txId?: string) => {
         if (txId) {
-            window.open(getExplorerTxUrl(txId), '_blank');
+            window.open(getExplorerTxUrl(txId, providerIndex), '_blank', 'noopener,noreferrer');
         }
     };
 

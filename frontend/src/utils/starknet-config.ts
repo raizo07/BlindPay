@@ -139,6 +139,16 @@ export function isSupportedChain(chainId: string | null | undefined): boolean {
     );
 }
 
+export function resolveProviderIndex(chainId?: string | null, fallbackIndex = 1): number {
+    if (chainId) return getNetworkConfigByChain(chainId).providerIndex;
+    return fallbackIndex;
+}
+
+export function getStarknetRpcProvider(chainId?: string | null, fallbackIndex = 1): ProviderInterface {
+    const index = resolveProviderIndex(chainId, fallbackIndex);
+    return frontendProviders[index] ?? frontendProviders[0];
+}
+
 export function getExplorerTxUrl(txHash: string, providerIndex = 1): string {
     const base = getNetworkConfig(providerIndex).explorerTxBase;
     return `${base}/${txHash}`;

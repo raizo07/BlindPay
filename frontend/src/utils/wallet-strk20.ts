@@ -50,8 +50,10 @@ export async function detectStrk20Support(
     if (specsIndicateStrk20(specs) || walletApisIndicateStrk20(walletApis)) {
         return true;
     }
+    // Ready/Argent implement STRK20 but often omit it from supportedSpecs.
+    // Do not call strk20Balances here — Ready prompts "Share Balances" during connect.
     if (isKnownPrivacyWallet(wallet)) {
-        return probeStrk20Support(wallet);
+        return true;
     }
     return false;
 }

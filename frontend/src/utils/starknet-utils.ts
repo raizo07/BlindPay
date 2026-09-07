@@ -1,9 +1,9 @@
 import { hash, shortString, num } from "starknet";
 import type { ProviderInterface } from "starknet";
 
-/** ~60s max wait, then one direct receipt fetch. */
-const TX_RECEIPT_RETRIES = 30;
-const TX_RECEIPT_INTERVAL_MS = 2000;
+/** Background receipt poll — do not block payment UI on this. */
+const TX_RECEIPT_RETRIES = 20;
+const TX_RECEIPT_INTERVAL_MS = 1500;
 
 export interface TxReceiptSummary {
     execution_status?: string;
@@ -14,16 +14,17 @@ export async function confirmStarknetTransaction(
     provider: ProviderInterface,
     txHash: string
 ): Promise<TxReceiptSummary> {
-    try {
-        const receipt = await provider.waitForTransaction(txHash, {
-            retries: TX_RECEIPT_RETRIES,
-            retryInterval: TX_RECEIPT_INTERVAL_MS,
-        });
-        return receipt as TxReceiptSummary;
-    } catch {
-        const receipt = await provider.getTransactionReceipt(txHash);
-        return receipt as TxReceiptSummary;
+    for (let attempt = 0; attempt < TX_RECEIPT_RETRIES; attempt++) {
+        try {
+            const receipt = await provider.getTransactionReceipt(txHash);
+            if (receipt) return receipt as TxReceiptSummary;
+        } catch {
+            /* receipt not indexed yet */
+        }
+        await new Promise((r) => setTimeout(r, TX_RECEIPT_INTERVAL_MS));
     }
+    const receipt = await provider.getTransactionReceipt(txHash);
+    return receipt as TxReceiptSummary;
 }
 
 export const ESCROW_COMMITMENT_TAG = shortString.encodeShortString("ESCROW_COMMITMENT_TAG:V1");

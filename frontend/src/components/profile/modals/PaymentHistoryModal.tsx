@@ -36,7 +36,7 @@ export const PaymentHistoryModal = ({ paymentIds, onClose, onViewTx }: PaymentHi
                                 <div key={idx} className="flex items-center justify-between bg-white/5 p-3 rounded-lg border border-white/5 hover:border-white/10">
                                     <span className="font-mono text-sm text-gray-300">{id.slice(0, 10)}...{id.slice(-8)}</span>
                                     <Button size="sm" variant="ghost" className="text-xs" onClick={() => onViewTx(id)}>
-                                        View Tx
+                                        View on Voyager
                                     </Button>
                                 </div>
                             ))}
